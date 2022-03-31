@@ -70,33 +70,48 @@ func parseJavaFile(filePath string) {
 
 	parseFile(content)
 
+//	fmt.Println(string(content))
+
 	os.Exit(3)
 }
 
 func parseFile(content []byte) {
 
-	inScope := false
+//	inScope := false
 	inComment := false
 	inDocumentation := false
 
-	inSlash := false
-	inStar := false
-	
-	for _, c := range content {
+	documentations := make([]string, 0)
+	comments := make([]string, 0)
 
-		switch c {
-		case slash:
-			if inSlash && inComment && !inStar {
-				inSlash = false
+	start := 0
+
+	for i, c := range content {
+
+		if c == slash {
+			nextIndex := i + 1
+			prevIndex := i - 1
+			if !inComment && nextIndex < len(content) && star == content[nextIndex] {
+				inComment = true
+				nextNextIndex := nextIndex + 1
+				inDocumentation = nextNextIndex < len(content) && star == content[nextNextIndex]
+				start = i
+			} else if inComment && prevIndex >= 0 && content[prevIndex] == star {
+
+				if inDocumentation {
+					documentations = append(documentations, string(content[start:nextIndex]))
+					inDocumentation = false
+				} else if inComment {
+					comments = append(comments, string(content[start:nextIndex]))
+		//			fmt.Println(comments[0], start, i)
+				}
 				inComment = false
-			} else if !inSlash && !inStar {
-				inSlash = true
 			}
-		case 
 		}
-
-		//fmt.Println(inScope, inComment, )
 	}
+
+
+	fmt.Println(comments)
 
 }
 
