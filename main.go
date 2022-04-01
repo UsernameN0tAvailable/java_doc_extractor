@@ -12,7 +12,6 @@ import (
 const (
 	scopeOn = byte('{')
 	scopeOff = byte('}')
-
 	slash = byte('/')
 	star = byte('*')
 	str = byte('"')
@@ -128,12 +127,10 @@ func parseFile(content []byte) {
 				signature = findSignature(i - 1, content, lastElementEnd)
 			}
 			scopeCount++
-			if isValidSignature(signature) {
-				if len(doc) > 0 {
-					fmt.Println(doc)
-				}
+			if isValidSignature(signature) {	
+				fmt.Println(doc)
 				fmt.Println(signature)
-
+				storeSignature(signature, doc)
 			} 
 
 			lastElementEnd = i
@@ -151,6 +148,30 @@ func parseFile(content []byte) {
 	}
 }
 
+
+func storeSignature(s string, doc string) {
+
+	isClass := false
+	fields := strings.Fields(s)
+
+	for _, f := range fields {
+		fT := strings.TrimSpace(f)
+		if fT == "class" {
+			isClass = true
+			break
+		}
+	}
+
+	if isClass {
+		classes = append(classes, NewClass(s, doc))
+	}
+
+
+	fmt.Println(fields)
+
+
+	os.Exit(3)
+}
 
 func isValidSignature(s string) bool {
 
