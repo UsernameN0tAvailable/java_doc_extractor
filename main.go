@@ -77,6 +77,7 @@ func parseJavaFile(filePath string) {
 func parseFile(content []byte) {
 
 	inComment := false
+	inInlineComment := false
 	inDocumentation := false
 	inString := false
 
@@ -87,10 +88,9 @@ func parseFile(content []byte) {
 
 	scopeCount := 0
 
-
 	for i, c := range content {
 
-		if c == slash {
+		if c == slash && !inString {
 			nextIndex := i + 1
 			prevIndex := i - 1
 			if !inComment && nextIndex < len(content) && star == content[nextIndex] {
@@ -98,7 +98,11 @@ func parseFile(content []byte) {
 				nextNextIndex := nextIndex + 1
 				inDocumentation = nextNextIndex < len(content) && star == content[nextNextIndex]
 				start = i
-			} else if inComment && prevIndex >= 0 && content[prevIndex] == star {
+			} else if !inComment && !inInlineComment && nextIndex < len(content) && slash == content[nextIndex] {
+				inComment = true
+				inInlineComment = true
+				start = i
+			} else if inComment && !inInlineComment && prevIndex >= 0 && content[prevIndex] == star {
 
 				if inDocumentation {
 					documentations = append(documentations, string(content[start:nextIndex]))
@@ -129,6 +133,9 @@ func parseFile(content []byte) {
 			scopeCount--
 		} else if c == str {
 			inString = !inString
+		} else if c == newLine && inInlineComment && !inString  {
+			inComment = false
+			inInlineComment = false
 		}
 	}
 }
