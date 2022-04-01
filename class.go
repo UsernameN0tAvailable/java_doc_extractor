@@ -71,7 +71,12 @@ func NewClass(signature string, doc string) Class {
 	} 
 }
 
-
+func (c* Class) GetDocLinesCount() int {
+	if len(c.doc) == 0 {
+		return 0
+	} 
+	return len(strings.Split(c.doc, "\n"))
+}
 
 func (c* Class) GetDoc() string {
 	return c.doc
