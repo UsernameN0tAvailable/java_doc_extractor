@@ -35,13 +35,11 @@ func main() {
 
 	listDirs(root)
 
-	//fmt.Println("tot files: " + string(tot))
+ 	fmt.Println("tot files: " + string(tot))
 	fmt.Println("tot java files: " + fmt.Sprint(tot))
 }
 
 func listDirs(root string) {
-
-	//fmt.Println("root", root)
 
 	files, err := ioutil.ReadDir(root)
 
@@ -61,19 +59,17 @@ func listDirs(root string) {
 }
 
 func parseJavaFile(filePath string) {
-	//fmt.Println("PARSE FILE: " + filePath)
+	fmt.Println("PARSE FILE: " + filePath)
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
 
 	if err != nil {
-//		fmt.Println("Couldnt read file at: " + filePath)
+		fmt.Println("Couldnt read file at: " + filePath)
 		return
 	}
 
 	parseFile(content)
-
-//	fmt.Println(string(content))
 
 //	os.Exit(3)
 }
@@ -82,7 +78,6 @@ func parseFile(content []byte) {
 
 	inComment := false
 	inDocumentation := false
-	inLogic := false
 	inString := false
 
 	documentations := make([]string, 0)
@@ -95,7 +90,7 @@ func parseFile(content []byte) {
 
 	for i, c := range content {
 
-		if c == slash && !inLogic {
+		if c == slash {
 			nextIndex := i + 1
 			prevIndex := i - 1
 			if !inComment && nextIndex < len(content) && star == content[nextIndex] {
@@ -114,7 +109,6 @@ func parseFile(content []byte) {
 				inComment = false
 			}
 		} else if c == scopeOn && !inComment && !inString {
-			inLogic = true
 
 			var signature string
 
@@ -133,10 +127,6 @@ func parseFile(content []byte) {
 
 		} else if c == scopeOff && !inComment && !inString {
 			scopeCount--
-
-			if scopeCount == 0 {
-				inLogic = false
-			}
 		} else if c == str {
 			inString = !inString
 		}
@@ -163,8 +153,14 @@ func isValidSignature(s string) bool {
 			subfields := strings.Fields(field)
 
 			for _,f := range subfields {
-				if !isValidSignatureKeyWord(f) {
-					return false
+
+				for _, f0 := range strings.Split(f, "(") {
+					for _, f1 := range strings.Split(f0, ")") {
+					if !isValidSignatureKeyWord(f1) {
+						return false
+					}
+					}
+
 				}
 			}
 		}
@@ -173,7 +169,7 @@ func isValidSignature(s string) bool {
 }
 
 func isValidSignatureKeyWord(predicate string) bool {
-	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->"
+	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" 
 }
 
 
