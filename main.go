@@ -65,7 +65,6 @@ func listDirs(root string) {
 }
 
 func parseJavaFile(filePath string) {
-	//fmt.Println("START PARSE FILE: " + filePath)
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -76,7 +75,6 @@ func parseJavaFile(filePath string) {
 	}
 
 	parseFile(content)
-	//fmt.Println("END PARSE FILE: " + filePath)
 
 	//	os.Exit(3)
 }
@@ -88,12 +86,11 @@ func parseFile(content []byte) {
 	inDocumentation := false
 	inString := false
 
-	documentations := make([]string, 0)
-	comments := make([]string, 0)
-
 	start := 0
 	lastElementEnd := 0
 	scopeCount := 0
+
+	doc := ""
 
 	for i, c := range content {
 
@@ -112,10 +109,10 @@ func parseFile(content []byte) {
 			} else if inComment && !inInlineComment && prevIndex >= 0 && content[prevIndex] == star {
 
 				if inDocumentation {
-					documentations = append(documentations, string(content[start:nextIndex]))
+					doc = string(content[start:nextIndex])
 					inDocumentation = false
 				} else if inComment {
-					comments = append(comments, string(content[start:nextIndex]))
+					doc = ""
 				}
 				inComment = false
 				lastElementEnd = i
@@ -131,7 +128,11 @@ func parseFile(content []byte) {
 			}
 			scopeCount++
 			if isValidSignature(signature) {
-				fmt.Println(blankSpace(scopeCount) + signature)
+				if len(doc) > 0 {
+					fmt.Println(doc)
+				}
+				fmt.Println(signature)
+
 			} 
 
 			lastElementEnd = i
@@ -220,13 +221,7 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 			}
 
 
-			//fmt.Println("is this a joke",s)
-
 			splt := strings.Split(s, "\n")
-			//fmt.Println("in: ", splt, len(splt))
-
-			//fmt.Println(splt)
-
 			if len(splt) <= 1 {return ""}
 
 			startIndex := 0
@@ -238,7 +233,6 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 					break
 				}
 			}
-			//fmt.Println(startIndex)
 			out := strings.TrimSpace( strings.Join(splt[startIndex:], ""))
 
 			return  out
