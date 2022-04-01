@@ -78,7 +78,7 @@ func parseJavaFile(filePath string) {
 	parseFile(content)
 	//fmt.Println("END PARSE FILE: " + filePath)
 
-//	os.Exit(3)
+	//	os.Exit(3)
 }
 
 func parseFile(content []byte) {
@@ -191,7 +191,7 @@ func findFirstSignature(i int, content []byte) []byte {
 	end := i
 
 	for true {
-		if ( content[i] == newLine || content[i] == semiColumn) {
+		if i == 0 || ( content[i] == newLine || content[i] == semiColumn) {
 			return content[i:end]
 		} else if i >= 1 {
 			i--
@@ -210,19 +210,35 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 
 	for true {
 		if i == lastElementEnd ||( bracketScopeCount == 0 && (content[i] == scopeOff || content[i] == slash || i == lastElementEnd || content[i] == semiColumn || content[i] == scopeOn)) {
-			s := strings.TrimSpace(string(content[i+1:end]))
+
+			var s string
+
+			if i < end {
+				s = strings.TrimSpace(string(content[i+1:end]))
+			} else {
+				s = ""
+			}
+
+
+			//fmt.Println("is this a joke",s)
 
 			splt := strings.Split(s, "\n")
+			//fmt.Println("in: ", splt, len(splt))
+
+			//fmt.Println(splt)
+
+			if len(splt) <= 1 {return ""}
 
 			startIndex := 0
 
 			for i, c := range splt {
-				if strings.TrimSpace(string(c))[0] != at {
+				strBef := strings.TrimSpace(string(c))
+				if len(strBef) > 0 && strBef[0] != at {
 					startIndex = i
 					break
 				}
 			}
-
+			//fmt.Println(startIndex)
 			out := strings.TrimSpace( strings.Join(splt[startIndex:], ""))
 
 			return  out
