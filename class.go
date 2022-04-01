@@ -6,6 +6,7 @@ import (
 
 
 type Class struct {
+	path string
 	doc string
 	visibility string
 	name string
@@ -14,7 +15,7 @@ type Class struct {
 	methods []Method
 }
 
-func NewClass(signature string, doc string) Class {
+func NewClass(signature string, doc string, path string, imports *Imports) Class {
 
 	fields := strings.Fields(signature)
 
@@ -39,14 +40,18 @@ func NewClass(signature string, doc string) Class {
 		vis = strings.Join(fields[:classIndex], " ")
 	}
 
-	className := fields[classIndex + 1]
+	className :=strings.Join(strings.Split(strings.Split(path, ".java")[0], "/"), ".")
+
+	//fmt.Println(path)
 
 	var super string
 
 	if extendIndex < 1 {
 		super = ""
 	} else {
-		super = fields[extendIndex + 1]
+
+		toFind :=removeTemplate(fields[extendIndex + 1])
+		super = imports.GetPath(toFind)
 	}
 
 
@@ -57,11 +62,13 @@ func NewClass(signature string, doc string) Class {
 		interfacesStr := strings.Split(tmp, "{")[0]
 
 		for _,in := range strings.Split(interfacesStr, ",") {
-			implements = append(implements, strings.TrimSpace(in))
+			toFind := removeTemplate(strings.TrimSpace(in))
+			implements = append(implements, imports.GetPath(toFind))
 		}
 	}
 
 	return Class{
+		path: path,
 		doc: doc, 
 		visibility: vis,
 		name: className,
@@ -69,6 +76,10 @@ func NewClass(signature string, doc string) Class {
 		interfaces: implements,
 		methods: make([]Method, 0),
 	} 
+}
+
+func (c * Class) GetPath() string {
+	return c.path
 }
 
 func (c* Class) GetDocLinesCount() int {
@@ -98,3 +109,13 @@ func (c* Class) GetInterfaces() []string {
 	return c.interfaces
 }
 
+func removeTemplate(name string) string {
+
+	tmp := strings.Split(name, "<")
+
+	if len(tmp) > 1 {
+		return tmp[0]
+	} else {
+		return name
+	}
+}

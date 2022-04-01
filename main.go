@@ -26,6 +26,8 @@ const (
 var tot int = 0
 
 var classes []Class = make([]Class, 0)
+var interfaces []string = make([]string, 0)
+
 
 func main() {
 
@@ -40,9 +42,11 @@ func main() {
 
 	listDirs(root)
 
+	
 	for _, c := range classes {
 		super := c.GetSuper()
 		in := c.GetInterfaces()
+		if len(in) > 0 {
 		fmt.Println("")
 		fmt.Println(c.GetName())
 		fmt.Println("\tdoc:", c.GetDocLinesCount())
@@ -53,9 +57,12 @@ func main() {
 			fmt.Println("\tinterfaces:", in)
 		}
 	}
+	} 
 
-	//fmt.Println(classes)
-	fmt.Println("\ntot files scanned: " + fmt.Sprint(tot))
+	fmt.Println("\ntot classes", len(classes))
+	fmt.Println("\ntot interfaces", len(interfaces))
+	fmt.Println("\ntot files scanned: " + fmt.Sprint(tot))	
+	
 }
 
 func listDirs(root string) {
@@ -89,12 +96,15 @@ func parseJavaFile(filePath string) {
 		return
 	}
 
-	parseFile(content)
+	parseFile(content, filePath)
 
-	//	os.Exit(3)
+	//os.Exit(3)
+
 }
 
-func parseFile(content []byte) {
+func parseFile(content []byte, path string) {
+
+	//fmt.Println(path)
 
 	inComment := false
 	inInlineComment := false
@@ -106,6 +116,10 @@ func parseFile(content []byte) {
 	scopeCount := 0
 
 	doc := ""
+
+	imports := NewImports(content)
+
+	//fmt.Println(imports)
 
 	for i, c := range content {
 
@@ -145,7 +159,7 @@ func parseFile(content []byte) {
 			if isValidSignature(signature) {	
 				//fmt.Println(doc)
 				//fmt.Println(signature)
-				storeSignature(signature, doc)
+				storeSignature(signature, doc, path, &imports)
 			} 
 
 			lastElementEnd = i
@@ -164,9 +178,10 @@ func parseFile(content []byte) {
 }
 
 
-func storeSignature(s string, doc string) {
+func storeSignature(s string, doc string, path string, imports *Imports) {
 
 	isClass := false
+	isInterface := false
 	fields := strings.Fields(s)
 
 	for _, f := range fields {
@@ -174,11 +189,17 @@ func storeSignature(s string, doc string) {
 		if fT == "class" {
 			isClass = true
 			break
+		} else if fT == "interface" {
+			isInterface = true
+			break
 		}
 	}
 
 	if isClass {
-		classes = append(classes, NewClass(s, doc))
+		classes = append(classes, NewClass(s, doc, strings.Split(path, "java/")[1], imports))
+	} else if isInterface {
+		interfaces = append(interfaces, s)
+		//fmt.Print(s)
 	}
 
 
@@ -303,5 +324,65 @@ func blankSpace(count int) string {
 
 	return out
 }
+
+type Imports struct {
+	imports []string
+	packages []string
+}
+
+
+func NewImports(c []byte) Imports {
+	content := string(c)
+
+	imports := make([]string, 0)
+
+	packages := make([]string, 0)
+
+
+	lines := strings.Split(content, "\n")
+
+	for _,line := range lines {
+		splt := strings.Split(line, " ")
+
+		if len(splt) > 0 && splt[0] == "import" {
+			imports = append(imports, strings.Split(splt[len(splt) -1], ";")[0])
+		}
+		if len(splt) > 0 && splt[0] == "package" {
+			packages = append(packages, strings.Split(splt[len(splt) -1], ";")[0])
+		}
+	}
+
+	if len(packages) > 1 {
+		fmt.Println("impossible")
+	}
+
+	//fmt.Println(len(packages))
+
+	return Imports{imports: imports, packages: packages} 
+}
+
+
+func (i*Imports) GetPath(name string) string {
+
+	for _,i := range i.imports {
+		splt := strings.Split(i, ".")
+
+		if splt[len(splt) - 1] == name {
+			return i
+		}
+	}
+
+	return i.packages[0] + "." + name
+}
+
+func (i*Imports) Print() {
+	//fmt.Println(i.imports)
+}
+
+
+
+
+
+
 
 
