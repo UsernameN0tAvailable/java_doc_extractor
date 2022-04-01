@@ -65,7 +65,7 @@ func listDirs(root string) {
 }
 
 func parseJavaFile(filePath string) {
-	//fmt.Println("PARSE FILE: " + filePath)
+	//fmt.Println("START PARSE FILE: " + filePath)
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -76,8 +76,9 @@ func parseJavaFile(filePath string) {
 	}
 
 	parseFile(content)
+	//fmt.Println("END PARSE FILE: " + filePath)
 
-	//	os.Exit(3)
+//	os.Exit(3)
 }
 
 func parseFile(content []byte) {
@@ -119,24 +120,21 @@ func parseFile(content []byte) {
 				inComment = false
 				lastElementEnd = i
 			}
+
 		} else if c == scopeOn && !inComment && !inString {
 
 			var signature string
-
-			// probably a class
 			if scopeCount == 0 {
 				signature = string(findFirstSignature(i, content))
 			} else {
 				signature = findSignature(i - 1, content, lastElementEnd)
 			}
-
 			scopeCount++
 			if isValidSignature(signature) {
 				fmt.Println(blankSpace(scopeCount) + signature)
-			} else {
-			//	fmt.Println("not valid")
-			}
+			} 
 
+			lastElementEnd = i
 
 		} else if c == scopeOff && !inComment && !inString {
 			scopeCount--
@@ -193,7 +191,7 @@ func findFirstSignature(i int, content []byte) []byte {
 	end := i
 
 	for true {
-		if content[i] == newLine || content[i] == semiColumn {
+		if ( content[i] == newLine || content[i] == semiColumn) {
 			return content[i:end]
 		} else if i >= 1 {
 			i--
@@ -208,10 +206,10 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 
 	end := i
 
-	inBrackets := false
+	bracketScopeCount := 0 
 
 	for true {
-		if !inBrackets && (content[i] == scopeOff || content[i] == slash || i == lastElementEnd || content[i] == semiColumn || content[i] == scopeOn) {
+		if i == lastElementEnd ||( bracketScopeCount == 0 && (content[i] == scopeOff || content[i] == slash || i == lastElementEnd || content[i] == semiColumn || content[i] == scopeOn)) {
 			s := strings.TrimSpace(string(content[i+1:end]))
 
 			splt := strings.Split(s, "\n")
@@ -225,15 +223,17 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 				}
 			}
 
-			return strings.TrimSpace( strings.Join(splt[startIndex:], ""))
+			out := strings.TrimSpace( strings.Join(splt[startIndex:], ""))
+
+			return  out
 		} else if i >= 1 {
 			i--
 		}
 
 		if content[i] == roundClose {
-			inBrackets = true
+			bracketScopeCount++
 		} else if content[i] == roundOpen {
-			inBrackets = false
+			bracketScopeCount--
 		}
 	}
 
