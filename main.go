@@ -35,7 +35,7 @@ func main() {
 
 	listDirs(root)
 
- 	fmt.Println("tot files: " + string(tot))
+	fmt.Println("tot files: " + string(tot))
 	fmt.Println("tot java files: " + fmt.Sprint(tot))
 }
 
@@ -71,7 +71,7 @@ func parseJavaFile(filePath string) {
 
 	parseFile(content)
 
-//	os.Exit(3)
+	//	os.Exit(3)
 }
 
 func parseFile(content []byte) {
@@ -156,16 +156,15 @@ func isValidSignature(s string) bool {
 			return false
 		}
 
+		//fmt.Println("check: ", fields)
 		for _,field := range fields {
 			subfields := strings.Fields(field)
-
 			for _,f := range subfields {
-
 				for _, f0 := range strings.Split(f, "(") {
-					for _, f1 := range strings.Split(f0, ")") {
-					if !isValidSignatureKeyWord(f1) {
-						return false
-					}
+					for _, f1 := range strings.Split(f0, ")") {	
+						if !isValidSignatureKeyWord(f1) {
+							return false
+						}
 					}
 
 				}
@@ -176,7 +175,7 @@ func isValidSignature(s string) bool {
 }
 
 func isValidSignatureKeyWord(predicate string) bool {
-	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" 
+	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!="
 }
 
 
