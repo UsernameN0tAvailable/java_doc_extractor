@@ -88,7 +88,7 @@ func parseFile(content []byte) {
 	comments := make([]string, 0)
 
 	start := 0
-
+	lastElementEnd := 0
 	scopeCount := 0
 
 	for i, c := range content {
@@ -114,6 +114,7 @@ func parseFile(content []byte) {
 					comments = append(comments, string(content[start:nextIndex]))
 				}
 				inComment = false
+				lastElementEnd = i
 			}
 		} else if c == scopeOn && !inComment && !inString {
 
@@ -123,7 +124,7 @@ func parseFile(content []byte) {
 			if scopeCount == 0 {
 				signature = string(findFirstSignature(i, content))
 			} else {
-				signature = findSignature(i, content)
+				signature = findSignature(i, content, lastElementEnd)
 			}
 
 			if isValidSignature(signature) {
@@ -134,11 +135,13 @@ func parseFile(content []byte) {
 
 		} else if c == scopeOff && !inComment && !inString {
 			scopeCount--
+			lastElementEnd = i
 		} else if c == str {
 			inString = !inString
 		} else if c == newLine && inInlineComment && !inString  {
 			inComment = false
 			inInlineComment = false
+			lastElementEnd = i
 		}
 	}
 }
@@ -196,12 +199,12 @@ func findFirstSignature(i int, content []byte) []byte {
 }
 
 
-func findSignature(i int, content []byte) string {
+func findSignature(i int, content []byte, lastElementEnd int) string {
 
 	end := i
 
 	for true {
-		if content[i] == scopeOff || content[i] == slash {
+		if content[i] == scopeOff || content[i] == slash || i == lastElementEnd {
 			s := strings.TrimSpace(string(content[i+1:end]))
 			// remove newLines
 			s = removeChar(s, string(newLine))
