@@ -45,6 +45,8 @@ func listDirs(root string) {
 
 	if err != nil {
 		fmt.Println(err)
+		parseJavaFile(root)
+
 		return
 	}
 	for fileIndex := range files {
@@ -155,6 +157,8 @@ func isValidSignature(s string) bool {
 		if len(predicate) == 0 {
 			return false
 		}
+
+//		fmt.Println(fields)
 
 		//fmt.Println("check: ", fields)
 		for _,field := range fields {
