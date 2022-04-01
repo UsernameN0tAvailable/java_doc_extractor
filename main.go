@@ -19,6 +19,9 @@ const (
 	newLine = byte('\n') // only works on unix systems
 	tab = byte('\t')
 	at = byte('@') 
+	semiColumn = byte(';')
+	roundOpen = byte('(')
+	roundClose = byte(')')
 )
 
 var tot int = 0
@@ -37,7 +40,7 @@ func main() {
 	listDirs(root)
 
 	fmt.Println("tot files: " + string(tot))
-	fmt.Println("tot java files: " + fmt.Sprint(tot))
+	//fmt.Println("tot java files: " + fmt.Sprint(tot))
 }
 
 func listDirs(root string) {
@@ -62,7 +65,7 @@ func listDirs(root string) {
 }
 
 func parseJavaFile(filePath string) {
-	fmt.Println("PARSE FILE: " + filePath)
+	//fmt.Println("PARSE FILE: " + filePath)
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -124,14 +127,16 @@ func parseFile(content []byte) {
 			if scopeCount == 0 {
 				signature = string(findFirstSignature(i, content))
 			} else {
-				signature = findSignature(i, content, lastElementEnd)
-			}
-
-			if isValidSignature(signature) {
-				fmt.Println(signature)
+				signature = findSignature(i - 1, content, lastElementEnd)
 			}
 
 			scopeCount++
+			if isValidSignature(signature) {
+				fmt.Println(blankSpace(scopeCount) + signature)
+			} else {
+			//	fmt.Println("not valid")
+			}
+
 
 		} else if c == scopeOff && !inComment && !inString {
 			scopeCount--
@@ -153,7 +158,7 @@ func isValidSignature(s string) bool {
 
 	if len(trimmed) == 0 {
 		return false
-	} else if trimmed[0] == at {
+	} else if trimmed[0] == at {	
 		return false
 	} else {
 		fields := strings.Fields(trimmed)
@@ -179,7 +184,7 @@ func isValidSignature(s string) bool {
 }
 
 func isValidSignatureKeyWord(predicate string) bool {
-	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!="
+	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized"
 }
 
 
@@ -188,7 +193,7 @@ func findFirstSignature(i int, content []byte) []byte {
 	end := i
 
 	for true {
-		if content[i] == newLine {
+		if content[i] == newLine || content[i] == semiColumn {
 			return content[i:end]
 		} else if i >= 1 {
 			i--
@@ -203,15 +208,32 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 
 	end := i
 
+	inBrackets := false
+
 	for true {
-		if content[i] == scopeOff || content[i] == slash || i == lastElementEnd {
+		if !inBrackets && (content[i] == scopeOff || content[i] == slash || i == lastElementEnd || content[i] == semiColumn || content[i] == scopeOn) {
 			s := strings.TrimSpace(string(content[i+1:end]))
-			// remove newLines
-			s = removeChar(s, string(newLine))
-			// remove tab
-			return removeChar(s, string(tab))
+
+			splt := strings.Split(s, "\n")
+
+			startIndex := 0
+
+			for i, c := range splt {
+				if strings.TrimSpace(string(c))[0] != at {
+					startIndex = i
+					break
+				}
+			}
+
+			return strings.TrimSpace( strings.Join(splt[startIndex:], ""))
 		} else if i >= 1 {
 			i--
+		}
+
+		if content[i] == roundClose {
+			inBrackets = true
+		} else if content[i] == roundOpen {
+			inBrackets = false
 		}
 	}
 
@@ -223,6 +245,16 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 func removeChar(s string, c string) string {
 	split := strings.Split(s, c)
 	return strings.Join(split, "")
+}
+
+
+func blankSpace(count int) string {
+	out := ""
+	for i := 0; i< count; i++ {
+		out += "\t"
+	}
+
+	return out
 }
 
 
