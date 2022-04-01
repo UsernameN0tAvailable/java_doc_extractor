@@ -40,6 +40,7 @@ func main() {
 
 	listDirs(root)
 
+	fmt.Println(classes)
 	fmt.Println("\ntot files scanned: " + fmt.Sprint(tot))
 }
 
@@ -128,8 +129,8 @@ func parseFile(content []byte) {
 			}
 			scopeCount++
 			if isValidSignature(signature) {	
-				fmt.Println(doc)
-				fmt.Println(signature)
+				//fmt.Println(doc)
+				//fmt.Println(signature)
 				storeSignature(signature, doc)
 			} 
 
@@ -167,10 +168,10 @@ func storeSignature(s string, doc string) {
 	}
 
 
-	fmt.Println(fields)
+	//fmt.Println(fields)
 
 
-	os.Exit(3)
+	//os.Exit(3)
 }
 
 func isValidSignature(s string) bool {
