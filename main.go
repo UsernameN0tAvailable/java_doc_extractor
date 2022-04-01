@@ -17,6 +17,7 @@ const (
 	star = byte('*')
 	str = byte('"')
 	newLine = byte('\n') // only works on unix systems
+	tab = byte('\t')
 	at = byte('@') 
 )
 
@@ -122,7 +123,7 @@ func parseFile(content []byte) {
 			if scopeCount == 0 {
 				signature = string(findFirstSignature(i, content))
 			} else {
-				signature = string(findFirstSignature(i, content))
+				signature = findSignature(i, content)
 			}
 
 			if isValidSignature(signature) {
@@ -157,10 +158,6 @@ func isValidSignature(s string) bool {
 		if len(predicate) == 0 {
 			return false
 		}
-
-//		fmt.Println(fields)
-
-		//fmt.Println("check: ", fields)
 		for _,field := range fields {
 			subfields := strings.Fields(field)
 			for _,f := range subfields {
@@ -199,19 +196,30 @@ func findFirstSignature(i int, content []byte) []byte {
 }
 
 
-func findSignature(i int, content []byte) []byte {
+func findSignature(i int, content []byte) string {
 
 	end := i
 
 	for true {
 		if content[i] == scopeOff || content[i] == slash {
-			return content[i:end]
+			s := strings.TrimSpace(string(content[i+1:end]))
+			// remove newLines
+			s = removeChar(s, string(newLine))
+			// remove tab
+			return removeChar(s, string(tab))
 		} else if i >= 1 {
 			i--
 		}
 	}
 
-	return nil
+	return "" 
+}
+
+
+
+func removeChar(s string, c string) string {
+	split := strings.Split(s, c)
+	return strings.Join(split, "")
 }
 
 
