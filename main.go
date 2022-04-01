@@ -26,6 +26,8 @@ const (
 
 var tot int = 0
 
+var classes []Class = make([]Class, 0)
+
 func main() {
 
 	args := os.Args
@@ -39,8 +41,7 @@ func main() {
 
 	listDirs(root)
 
-	fmt.Println("tot files: " + string(tot))
-	//fmt.Println("tot java files: " + fmt.Sprint(tot))
+	fmt.Println("\ntot files scanned: " + fmt.Sprint(tot))
 }
 
 func listDirs(root string) {
