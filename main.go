@@ -42,11 +42,10 @@ func main() {
 
 	listDirs(root)
 
-	
+
 	for _, c := range classes {
 		super := c.GetSuper()
 		in := c.GetInterfaces()
-		if len(in) > 0 {
 		fmt.Println("")
 		fmt.Println(c.GetName())
 		fmt.Println("\tdoc:", c.GetDocLinesCount())
@@ -55,14 +54,13 @@ func main() {
 		}
 		if len(in) > 0 {
 			fmt.Println("\tinterfaces:", in)
-		}
-	}
+		}	
 	} 
 
 	fmt.Println("\ntot classes", len(classes))
 	fmt.Println("\ntot interfaces", len(interfaces))
 	fmt.Println("\ntot files scanned: " + fmt.Sprint(tot))	
-	
+
 }
 
 func listDirs(root string) {
