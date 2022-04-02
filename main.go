@@ -58,9 +58,27 @@ func main() {
 	} 
 
 	fmt.Println("\ntot classes", len(classes))
-	fmt.Println("\ntot interfaces", len(interfaces))
-	fmt.Println("\ntot files scanned: " + fmt.Sprint(tot))	
+	fmt.Println("tot interfaces", len(interfaces))
+	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
 
+	// search matching super inside of project
+	totS := 0
+	totFound := 0
+
+	for _,c := range classes {
+		super := c.GetSuper()
+		if len(super) > 0 {
+			for _,cc := range classes {
+				if cc.GetName() == super {
+					totFound++
+					break
+				}
+			}
+			totS++
+		}
+	}
+
+	fmt.Println("tot imports: ", (totS - totFound))
 }
 
 func listDirs(root string) {
