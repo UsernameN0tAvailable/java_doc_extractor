@@ -563,7 +563,7 @@ func (i*Imports) GetPath(name string) string {
 
 	}
 
-	return i.packages[0] + "." + name
+	return name 
 }
 
 
