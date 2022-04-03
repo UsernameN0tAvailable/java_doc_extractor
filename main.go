@@ -51,7 +51,7 @@ func (e *Extractor) Extract(rootArg string) {
 
 	e.listDirs(root)
 
-
+/*
 	for _, c := range e.classes {
 		super := c.GetSuper()
 		in := c.GetInterfaces()
@@ -84,53 +84,53 @@ func (e *Extractor) Extract(rootArg string) {
 		if len(super) > 0 {
 			fmt.Println("\tsuper:",super)
 		}	
-	} 
+	}  */
 
 
-	fmt.Println("\ntot classes", len(e.classes))
-	fmt.Println("tot interfaces", len(e.interfaces))
-	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
+//	fmt.Println("\ntot classes", len(e.classes))
+//	fmt.Println("tot interfaces", len(e.interfaces))
+//	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
 
 	// search matching super inside of project
-	totS := 0
-	totFound := 0
 
-	for _,c := range e.classes {
-		super := c.GetSuper()
-		if len(super) > 0 {
-			for _,cc := range e.classes {
-				if cc.GetName() == super {
-					totFound++
-					break
-				}
+	notFound := make([]string, 0, 10000)
+
+	for _,class := range e.classes {
+
+		superClass := class.GetSuper()
+
+		found := false
+
+		for _,inClass := range e.classes {
+
+			if inClass.GetName() == superClass {
+				found = true
+				break
 			}
-			totS++
 		}
-	}
 
-	fmt.Println("tot imports: ", (totS - totFound))
+		if !found {
 
+			foundInNotFound := false
 
-	found := 0
-
-	//shouldFind := make([]string, 0)
-
-	hasExtends := 0
-
-	for _,c := range e.classes {
-		super := c.GetSuper()
-		if len(super) > 0 {
-			hasExtends++
-			for _,c0 := range e.classes {
-				if super == c0.GetName() {
-					found++
+			for _,fn := range notFound {
+				if fn == superClass {
+					foundInNotFound = true
 					break
 				}
+
+			}
+
+			if !foundInNotFound {
+				notFound = append(notFound, superClass)
 			}
 		}
 	}
 
-	fmt.Println("extends within project:", hasExtends, ",extends imported", hasExtends - found)
+	for _,f := range notFound {
+	fmt.Println(f)
+
+	}
 
 }
 
@@ -323,7 +323,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	}
 
 	if isClass {
-		e.classes = append(e.classes, NewClass(s, doc, pathIn, imports))
+		e.classes = append(e.classes, NewClass(s, doc, pathIn, imports, e.activeClass != nil))
 	} else if isInterface {
 		e.interfaces = append(e.interfaces, NewInterface(s, doc, pathIn, imports))
 	} else // method

@@ -13,7 +13,7 @@ type Class struct {
 	interfaces []string
 }
 
-func NewClass(signature string, doc string, path string, imports *Imports) Class {
+func NewClass(signature string, doc string, path string, imports *Imports, isInnerClass bool) Class {
 
 	fields := strings.Fields(RemoveTemplate(signature))
 
@@ -30,6 +30,8 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 		}
 	}
 
+	name := fields[classIndex + 1]
+
 	var vis string 
 
 	if classIndex < 1 {
@@ -38,14 +40,20 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 		vis = strings.Join(fields[:classIndex], " ")
 	}
 
-	className :=strings.Join(strings.Split(strings.Split(path, ".java")[0], "/"), ".")
+	pathSplt := strings.Split(strings.Split(path, ".java")[0], "/")
+
+	if isInnerClass {
+		pathSplt[len(pathSplt) - 1] = name
+	}
+
+
+	className := strings.Join(pathSplt, ".")
 
 	var super string
 
 	if extendIndex < 1 {
 		super = ""
 	} else {
-
 		toFind :=RemoveTemplate(fields[extendIndex + 1])
 		super = imports.GetPath(toFind)
 	}
@@ -66,7 +74,7 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 		path: path,
 		doc: doc, 
 		visibility: vis,
-		name: className,
+		name: strings.TrimSpace(className),
 		super: super,
 		interfaces: implements,
 		methods: make([]Method, 0, 20),
