@@ -99,7 +99,7 @@ func (e *Extractor) listDirs(root string) {
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
 			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
-		} else if file.IsDir() {
+		} else if file.IsDir() && file.Name() != "build" {
 			e.listDirs(root + string(os.PathSeparator) + file.Name())
 		}
 	}
@@ -120,7 +120,6 @@ func (e* Extractor) parseJavaFile(filePath string) {
 
 func (e* Extractor) parseFile(content []byte, path string) {
 
-	//fmt.Println(string(content))
 
 	inComment := false
 	inInlineComment := false
@@ -138,7 +137,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 	for i, c := range content {
 
-		//fmt.Println(inString, inChar)
+
 
 		if c == slash && !inString && !inChar {
 			nextIndex := i + 1
@@ -170,12 +169,11 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			var signature string
 			if scopeCount == 0 {
-				signature = string(findFirstSignature(i, content))
+				signature = string(findFirstSignature(i, content, lastElementEnd))	
 			} else {
 				signature = findSignature(i - 1, content, lastElementEnd)
 			}
 
-			//fmt.Println(signature)
 
 			sigArr := make([]string, 0, 10)
 
@@ -187,7 +185,6 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 
 			signature = strings.Join(sigArr, "\n")
-			//fmt.Println("dude", signature)
 
 			scopeCount++
 			isClass := false
@@ -271,12 +268,13 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 
 	var pathIn string
 
-	p := strings.Split(path, "/java/")
+	p := strings.Split(path, "/org/")
+
 
 	if len(p) < 2 {
 		pathIn = path
 	} else {
-		pathIn = p[1] 
+		pathIn = "org/" + p[len(p) - 1] 
 	}
 
 	if isClass {
@@ -327,12 +325,12 @@ func isValidSignatureKeyWord(predicate string) bool {
 }
 
 
-func findFirstSignature(i int, content []byte) []byte {
+func findFirstSignature(i int, content []byte, lastElementEnd int) []byte {
 
 	end := i
 
 	for true {
-		if i == 0 || ( content[i] == slash || content[i] == semiColumn) {
+		if i == lastElementEnd + 1 || ( content[i] == slash || content[i] == semiColumn) {
 
 			sig := strings.Split(strings.TrimSpace(string(content[i:end])), "\n")
 
@@ -340,11 +338,23 @@ func findFirstSignature(i int, content []byte) []byte {
 			if len(sig) > 0 {
 				for i := 0; i< len(sig); i++ {
 					if len(sig[i]) == 0 || sig[i][0] == at {
-						startI = i + 1
+						startI = i + 1 
 					}
 				}
 			}
-			return []byte(strings.Join(sig[startI:], "\n"))
+
+			tmp := strings.Join(sig[startI:], "\n")
+
+			if len(tmp) > 0 && tmp[0] == slash {
+				spltTmp := strings.Split(tmp, "\n")
+				if len(spltTmp) > 0 {
+					return []byte(spltTmp[len(spltTmp) - 1])
+				} 
+				return []byte(tmp[1:])
+			} else {
+				return []byte(tmp)
+			}
+
 		} else if i >= 1 {
 			i--
 		}
@@ -445,8 +455,6 @@ func NewImports(c []byte) Imports {
 		fmt.Println("impossible")
 	}
 
-	//fmt.Println(len(packages))
-
 	return Imports{imports: imports, packages: packages} 
 }
 
@@ -474,7 +482,6 @@ func (i*Imports) GetPath(name string) string {
 					matching = true
 					for a := 0; a < importChunkIndex; a++ {
 						outPath = append(outPath, spltImport[a])
-						//fmt.Println(spltImport[a])
 					}
 
 					outPath = append(outPath, importChunk)
