@@ -147,7 +147,7 @@ func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
 		}
 	}
 
-	fmt.Println("not found", len(notFound))
+	fmt.Println("not found", len(notFound), "over", len(e.classes))
 
 	return e.classes, e.interfaces
 }
@@ -199,69 +199,13 @@ func (e* Extractor) parseJavaFile(filePath string) {
 		fmt.Println("Couldnt read file at: " + filePath)
 		return
 	}
-
-//	actualContent := removeInlineComments(content)
-
-	//fmt.Println(string(actualContent))
-
 	e.parseFile(content, filePath)
 
 }
-/*
-func removeInlineComments(data []byte) []byte {
-
-	inString := false
-
-
-	for i,d := range data {
-		if d == byte('"')  {
-			inString = !inString
-		} 
-
-		if !inString && len(data)  > i + 1 && d == slash && data[d+1] == slash {
-
-			start := d
-			toCut := i
-
-			for in := i; in < len(data); in++ {
-				if data[in] != newLine {
-					toCut = in + 1
-				} else {
-					toCut = in
-					break
-				}
-			}
-
-			
-
-
-		}
-
-
-	}
-
-	content := string(data)
-
-
-
-
-
-	spl := strings.Split(content, "//")
-
-	out := make([]string, 0, len(spl))
-
-	for _, s := range spl {
-		nlspl := strings.Split(s, "\n")
-
-		out = append(out, "\n" + strings.Join(nlspl[1:], "\n"))
-	}
-
-	return []byte(strings.Join(out, ""))
-} */
 
 func (e* Extractor) parseFile(content []byte, path string) {
 
-	//fmt.Println(path)
+	//fmt.Println(string(content))
 
 	inComment := false
 	inInlineComment := false
@@ -277,9 +221,9 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 	imports := NewImports(content)
 
-	//fmt.Println(imports)
-
 	for i, c := range content {
+
+		//fmt.Println(inString, inChar)
 
 		if c == slash && !inString && !inChar {
 			nextIndex := i + 1
@@ -307,12 +251,16 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 		} else if c == scopeOn && !inComment && !inString && !inChar {
 
+			//fmt.Println("scope on")
+
 			var signature string
 			if scopeCount == 0 {
 				signature = string(findFirstSignature(i, content))
 			} else {
 				signature = findSignature(i - 1, content, lastElementEnd)
 			}
+
+			//fmt.Println(signature)
 
 			sigArr := make([]string, 0, 10)
 
@@ -375,13 +323,13 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				e.activeClass = nil
 			}	
 
-		} else if c == str {
+		} else if c == str && !inChar && !inComment {
 			inString = !inString
 		} else if c == newLine && inInlineComment && !inString && !inChar  {
 			inComment = false
 			inInlineComment = false
 			lastElementEnd = i
-		} else if c == char {
+		} else if c == char && !inString && !inComment {
 			inChar = !inChar
 		}
 
