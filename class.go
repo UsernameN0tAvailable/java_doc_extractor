@@ -5,6 +5,14 @@ import (
 //	"os"
 	"strings"
 )
+
+type Scope interface {
+	IsClass() bool
+	IsInterface() bool
+	AppendMethod(m Method)
+}
+
+
 type Class struct {
 	path string
 	doc string
@@ -17,7 +25,10 @@ type Class struct {
 	fullPath string
 }
 
-func NewClass(fullPath string, signature string, doc string, path string, imports *Imports, isInnerClass bool) Class {
+func (c*Class) IsClass() bool {return true}
+func (c*Class) IsInterface() bool {return false}
+
+func NewClass(fullPath string, signature string, doc string, path string, imports *Imports, scope Scope) Class {
 
 	fields := strings.Fields(RemoveTemplate(signature))
 
@@ -49,7 +60,7 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 
 	pathSplt := strings.Split(strings.Split(path, ".java")[0], "/")
 
-	if isInnerClass {
+	if scope != nil && scope.IsClass() {
 		pathSplt[len(pathSplt) - 1] = name
 	}
 
@@ -150,6 +161,9 @@ type Interface struct {
 	methods []Method
 }
 
+func IsClass(c *Interface) bool { return false}
+func IsInterface(c *Interface) bool {return true}
+
 func NewInterface(signature string, doc string, path string, imports *Imports) Interface {
 
 	fields := strings.Fields(RemoveTemplate(signature))
@@ -236,6 +250,11 @@ func (c* Interface) GetName() string {
 func (c* Interface) GetSuper() string {
 	return c.super
 }
+
+func (c * Interface) AppendMethod(m Method) {
+	c.methods = append(c.methods, m)
+}
+
 
 
 //public to tst helper
