@@ -25,25 +25,24 @@ const (
 
 var tot int = 0
 
-var classes []Class = make([]Class, 0)
-var interfaces []Interface = make([]Interface, 0)
+type Extractor struct {
+	classes []Class
+	interfaces []Interface
+}
 
+func (e *Extractor) Extract(rootArg string) {
 
-func main() {
+	root, err := filepath.Abs(rootArg)
 
-	args := os.Args
-
-	if len(args) < 2 {
-		fmt.Println("too few arguments!!")
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
-	root, _ := filepath.Abs(os.Args[1])
-
-	listDirs(root)
+	e.listDirs(root)
 
 
-	for _, c := range classes {
+	for _, c := range e.classes {
 		super := c.GetSuper()
 		in := c.GetInterfaces()
 		fmt.Println("")
@@ -58,7 +57,7 @@ func main() {
 	} 
 
 
-	for _, c := range interfaces {
+	for _, c := range e.interfaces {
 		super := c.GetSuper()
 		fmt.Println("")
 		fmt.Println(c.GetName())
@@ -70,18 +69,18 @@ func main() {
 
 
 
-	fmt.Println("\ntot classes", len(classes))
-	fmt.Println("tot interfaces", len(interfaces))
+	fmt.Println("\ntot classes", len(e.classes))
+	fmt.Println("tot interfaces", len(e.interfaces))
 	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
 
 	// search matching super inside of project
 	totS := 0
 	totFound := 0
 
-	for _,c := range classes {
+	for _,c := range e.classes {
 		super := c.GetSuper()
 		if len(super) > 0 {
-			for _,cc := range classes {
+			for _,cc := range e.classes {
 				if cc.GetName() == super {
 					totFound++
 					break
@@ -100,11 +99,11 @@ func main() {
 
 	hasExtends := 0
 
-	for _,c := range classes {
+	for _,c := range e.classes {
 		super := c.GetSuper()
 		if len(super) > 0 {
 			hasExtends++
-			for _,c0 := range classes {
+			for _,c0 := range e.classes {
 				if super == c0.GetName() {
 					found++
 					break
@@ -114,16 +113,32 @@ func main() {
 	}
 
 	fmt.Println("extends within project:", hasExtends, ",extends imported", hasExtends - found)
+
 }
 
 
-func listDirs(root string) {
+func main() {
+
+	args := os.Args
+
+	if len(args) < 2 {
+		fmt.Println("too few arguments!!")
+		return
+	}
+
+	extractor := Extractor{classes: make([]Class, 0, 20000), interfaces: make([]Interface, 0, 10000)}
+
+	extractor.Extract(os.Args[1])
+}
+
+
+func (e *Extractor) listDirs(root string) {
 
 	files, err := ioutil.ReadDir(root)
 
 	if err != nil {
 		fmt.Println(err)
-		parseJavaFile(root)
+		e.parseJavaFile(root)
 
 		return
 	}
@@ -131,14 +146,14 @@ func listDirs(root string) {
 		file := files[fileIndex]
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
-			parseJavaFile(root + string(os.PathSeparator) + file.Name())
+			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
 		} else if file.IsDir() {
-			listDirs(root + string(os.PathSeparator) + file.Name())
+			e.listDirs(root + string(os.PathSeparator) + file.Name())
 		}
 	}
 }
 
-func parseJavaFile(filePath string) {
+func (e* Extractor) parseJavaFile(filePath string) {
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -148,13 +163,13 @@ func parseJavaFile(filePath string) {
 		return
 	}
 
-	parseFile(content, filePath)
+	e.parseFile(content, filePath)
 
 	//os.Exit(3)
 
 }
 
-func parseFile(content []byte, path string) {
+func (e* Extractor) parseFile(content []byte, path string) {
 
 	//fmt.Println(path)
 
@@ -216,7 +231,7 @@ func parseFile(content []byte, path string) {
 				//fmt.Println(doc)
 				//fmt.Println(signature)
 
-				storeSignature(signature, doc, path, &imports)
+				e.storeSignature(signature, doc, path, &imports)
 			} 
 
 			lastElementEnd = i
@@ -235,7 +250,7 @@ func parseFile(content []byte, path string) {
 }
 
 
-func storeSignature(s string, doc string, path string, imports *Imports) {
+func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) {
 
 	isClass := false
 	isInterface := false
@@ -253,9 +268,9 @@ func storeSignature(s string, doc string, path string, imports *Imports) {
 	}
 
 	if isClass {
-		classes = append(classes, NewClass(s, doc, strings.Split(path, "java/")[1], imports))
+		e.classes = append(e.classes, NewClass(s, doc, strings.Split(path, "java/")[1], imports))
 	} else if isInterface {
-		interfaces = append(interfaces, NewInterface(s, doc, strings.Split(path,"java/")[1], imports))
+		e.interfaces = append(e.interfaces, NewInterface(s, doc, strings.Split(path,"java/")[1], imports))
 	}
 
 }
