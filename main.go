@@ -29,7 +29,7 @@ type Extractor struct {
 	classes []Class
 	interfaces []Interface
 	activeClasses []*Class
-	activeClass *Class
+	activeClass Scope 
 }
 
 func (e*Extractor) GetClasses() []Class {
@@ -339,7 +339,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	}
 
 	if isClass {
-		e.classes = append(e.classes, NewClass(path, s, doc, pathIn, imports, e.activeClass != nil))
+		e.classes = append(e.classes, NewClass(path, s, doc, pathIn, imports, e.activeClass))
 	} else if isInterface {
 		e.interfaces = append(e.interfaces, NewInterface(s, doc, pathIn, imports))
 	} else // method
