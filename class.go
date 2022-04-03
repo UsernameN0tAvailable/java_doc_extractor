@@ -6,6 +6,7 @@ import (
 	//	"fmt"
 	//	"fmt"
 	//"fmt"
+	//"encoding/json"
 	"strings"
 )
 
@@ -18,13 +19,13 @@ type Scope interface {
 
 
 type Class struct {
-	path string
-	doc string
+	path string 
+	Doc string  `json:"documentation"`
 	visibility string
-	name string
-	super string
-	methods []Method
-	interfaces []string
+	Name string  `json:"name"`
+	Super string `json:"extends"`
+	Methods []Method
+	Interfaces []string `json:"interfaces"`
 	staticIndex int
 	fullPath string
 }
@@ -108,21 +109,21 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 		fullPath: fullPath,
 		staticIndex: staticIndex,
 		path: path,
-		doc: doc, 
+		Doc: doc, 
 		visibility: vis,
-		name: strings.TrimSpace(className),
-		super: super,
-		interfaces: implements,
-		methods: make([]Method, 0, 20),
+		Name: strings.TrimSpace(className),
+		Super: super,
+		Interfaces: implements,
+		Methods: make([]Method, 0, 20),
 	} 
 }
 
 func (c*Class) GetMethods() []Method {
-	return c.methods
+	return c.Methods
 }
 
 func (c * Class) AppendMethod(m Method) {
-	c.methods = append(c.methods, m)
+	c.Methods = append(c.Methods, m)
 }
 
 func (c * Class) GetPath() string {
@@ -134,14 +135,14 @@ func (c * Class) GetFullPath() string {
 }
 
 func (c* Class) GetDocLinesCount() int {
-	if len(c.doc) == 0 {
+	if len(c.Doc) == 0 {
 		return 0
 	} 
-	return len(strings.Split(c.doc, "\n"))
+	return len(strings.Split(c.Doc, "\n"))
 }
 
 func (c* Class) GetDoc() string {
-	return c.doc
+	return c.Doc
 }
 
 func (c* Class) GetVis() string {
@@ -149,15 +150,15 @@ func (c* Class) GetVis() string {
 }
 
 func (c* Class) GetName() string {
-	return c.name
+	return c.Name
 }
 
 func (c* Class) GetSuper() string {
-	return c.super
+	return c.Super
 }
 
 func (c* Class) GetInterfaces() []string {
-	return c.interfaces
+	return c.Interfaces
 }
 
 

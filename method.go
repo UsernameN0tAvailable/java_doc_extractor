@@ -1,20 +1,20 @@
 package main
 
 type Method struct {
-	signature string
-	documentation string
+	Signature string `json:"signature"`
+	Documentation string `json:"documentation"`
 }
 
 
 func (m*Method) GetDoc() string {
-	return m.documentation
+	return m.Documentation
 }
 
 func (m*Method) GetSignature() string {
-	return m.signature
+	return m.Signature
 }
 
  
 func NewMethod(s string, d string) Method {
-	return Method{signature: s, documentation: d}
+	return Method{Signature: s, Documentation: d}
 }
