@@ -42,7 +42,7 @@ func main() {
 
 	listDirs(root)
 
-
+	/*
 	for _, c := range classes {
 		super := c.GetSuper()
 		in := c.GetInterfaces()
@@ -55,7 +55,7 @@ func main() {
 		if len(in) > 0 {
 			fmt.Println("\tinterfaces:", in)
 		}	
-	} 
+	} */
 
 	fmt.Println("\ntot classes", len(classes))
 	fmt.Println("tot interfaces", len(interfaces))
@@ -101,17 +101,28 @@ func main() {
 			splt := strings.Split(super, ".")
 			for _,s := range splt {
 				if s == "elasticsearch" {
-					shouldFind = append(shouldFind, super)
+
+					already := false
+
+					for _,sf := range shouldFind {
+						if sf == super {
+							already = true
+						}
+					}
+					if !already {
+						shouldFind = append(shouldFind, super)
+					}
 					break
 				}
 			}
 		}
 	}
+
 	fmt.Println("Not Found")
 
 	for _,nf := range shouldFind {
 		fmt.Println(nf)
-	}
+	}  
 
 	//fmt.Println(shouldFind)
 	fmt.Println("should find", len(shouldFind))
@@ -302,8 +313,10 @@ func findFirstSignature(i int, content []byte) []byte {
 
 	end := i
 
+	//fmt.Println("first", string(content[i]))
+
 	for true {
-		if i == 0 || ( content[i] == newLine || content[i] == semiColumn) {
+		if i == 0 || ( content[i] == slash || content[i] == semiColumn) {
 			return content[i:end]
 		} else if i >= 1 {
 			i--
