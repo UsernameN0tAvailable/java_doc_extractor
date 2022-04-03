@@ -26,7 +26,7 @@ const (
 var tot int = 0
 
 var classes []Class = make([]Class, 0)
-var interfaces []string = make([]string, 0)
+var interfaces []Interface = make([]Interface, 0)
 
 
 func main() {
@@ -56,6 +56,19 @@ func main() {
 			fmt.Println("\tinterfaces:", in)
 		}	
 	} 
+
+
+	for _, c := range interfaces {
+		super := c.GetSuper()
+		fmt.Println("")
+		fmt.Println(c.GetName())
+		fmt.Println("\tdoc:", c.GetDocLinesCount())
+		if len(super) > 0 {
+			fmt.Println("\tsuper:",super)
+		}	
+	} 
+
+
 
 	fmt.Println("\ntot classes", len(classes))
 	fmt.Println("tot interfaces", len(interfaces))
@@ -100,7 +113,7 @@ func main() {
 		}
 	}
 
-	fmt.Println("extends found", hasExtends, "extends imported", hasExtends - found)
+	fmt.Println("extends within project:", hasExtends, ",extends imported", hasExtends - found)
 }
 
 
@@ -242,15 +255,9 @@ func storeSignature(s string, doc string, path string, imports *Imports) {
 	if isClass {
 		classes = append(classes, NewClass(s, doc, strings.Split(path, "java/")[1], imports))
 	} else if isInterface {
-		interfaces = append(interfaces, s)
-		//fmt.Print(s)
+		interfaces = append(interfaces, NewInterface(s, doc, strings.Split(path,"java/")[1], imports))
 	}
 
-
-	//fmt.Println(fields)
-
-
-	//os.Exit(3)
 }
 
 func isValidSignature(s string) bool {
