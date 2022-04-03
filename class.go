@@ -1,6 +1,8 @@
 package main
 
 import (
+//	"fmt"
+//	"os"
 	"strings"
 )
 type Class struct {
@@ -11,15 +13,18 @@ type Class struct {
 	super string
 	methods []Method
 	interfaces []string
+	staticIndex int
+	fullPath string
 }
 
-func NewClass(signature string, doc string, path string, imports *Imports, isInnerClass bool) Class {
+func NewClass(fullPath string, signature string, doc string, path string, imports *Imports, isInnerClass bool) Class {
 
 	fields := strings.Fields(RemoveTemplate(signature))
 
 	classIndex := -1 
 	extendIndex := -1 
 	implementsIndex := -1
+	staticIndex := -1
 	for i, p := range fields {
 		if p == "class" {
 			classIndex = i
@@ -27,6 +32,8 @@ func NewClass(signature string, doc string, path string, imports *Imports, isInn
 			extendIndex = i
 		} else if p == "implements" {
 			implementsIndex = i
+		} else if p == "static" {
+			staticIndex = i
 		}
 	}
 
@@ -70,7 +77,15 @@ func NewClass(signature string, doc string, path string, imports *Imports, isInn
 		}
 	}
 
+	/*
+	if staticIndex > -1 {
+		fmt.Println(path, className, super)
+		os.Exit(3)
+	}*/
+
 	return Class{
+		fullPath: fullPath,
+		staticIndex: staticIndex,
 		path: path,
 		doc: doc, 
 		visibility: vis,
@@ -91,6 +106,10 @@ func (c * Class) AppendMethod(m Method) {
 
 func (c * Class) GetPath() string {
 	return c.path
+}
+
+func (c * Class) GetFullPath() string {
+	return c.fullPath
 }
 
 func (c* Class) GetDocLinesCount() int {

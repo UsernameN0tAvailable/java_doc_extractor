@@ -51,7 +51,7 @@ func (e *Extractor) Extract(rootArg string) {
 
 	e.listDirs(root)
 
-/*
+	/*
 	for _, c := range e.classes {
 		super := c.GetSuper()
 		in := c.GetInterfaces()
@@ -87,9 +87,9 @@ func (e *Extractor) Extract(rootArg string) {
 	}  */
 
 
-//	fmt.Println("\ntot classes", len(e.classes))
-//	fmt.Println("tot interfaces", len(e.interfaces))
-//	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
+	//	fmt.Println("\ntot classes", len(e.classes))
+	//	fmt.Println("tot interfaces", len(e.interfaces))
+	//	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
 
 	// search matching super inside of project
 
@@ -99,40 +99,56 @@ func (e *Extractor) Extract(rootArg string) {
 
 		superClass := class.GetSuper()
 
-		found := false
+		if len(superClass) > 0 {
 
-		for _,inClass := range e.classes {
 
-			if inClass.GetName() == superClass {
-				found = true
-				break
-			}
-		}
+			found := false
 
-		if !found {
+			for _,inClass := range e.classes {
 
-			foundInNotFound := false
-
-			for _,fn := range notFound {
-				if fn == superClass {
-					foundInNotFound = true
+				if inClass.GetName() == superClass {
+					found = true
 					break
 				}
-
 			}
 
-			if !foundInNotFound {
-				notFound = append(notFound, superClass)
+			if !found {
+
+				foundInNotFound := false
+
+				for _,fn := range notFound {
+					if fn == superClass {
+						foundInNotFound = true
+						break
+					}
+
+				}
+
+				isInProject := false
+
+				for _,s := range strings.Split(superClass, ".") {
+					if s == "elasticsearch" {
+						isInProject = true
+						break
+					}
+				}
+
+				//fmt.Println(ii)
+
+				if !foundInNotFound && isInProject {
+					notFound = append(notFound, superClass)
+					fmt.Println("=================================")
+					fmt.Println(class.GetFullPath())
+					fmt.Println(class.GetName())
+					fmt.Println(superClass)
+				}
 			}
 		}
 	}
 
-	for _,f := range notFound {
-	fmt.Println(f)
-
-	}
-
+	fmt.Println("not found", len(notFound))
 }
+
 
 
 func main() {
@@ -271,7 +287,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			if active != nil {
 				e.activeClasses = e.activeClasses[:(len(e.activeClasses) - 1)]
-				
+
 				// find last used class
 				// because inner class could be inside
 				// of method
@@ -323,7 +339,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	}
 
 	if isClass {
-		e.classes = append(e.classes, NewClass(s, doc, pathIn, imports, e.activeClass != nil))
+		e.classes = append(e.classes, NewClass(path, s, doc, pathIn, imports, e.activeClass != nil))
 	} else if isInterface {
 		e.interfaces = append(e.interfaces, NewInterface(s, doc, pathIn, imports))
 	} else // method
@@ -472,12 +488,10 @@ func NewImports(c []byte) Imports {
 
 	packages := make([]string, 0)
 
-
 	lines := strings.Split(content, "\n")
 
 	for _,line := range lines {
-		splt := strings.Split(line, " ")
-
+		splt := strings.Split(strings.TrimSpace(line), " ")
 		if len(splt) > 0 && splt[0] == "import" {
 			imports = append(imports, strings.Split(splt[len(splt) -1], ";")[0])
 		}
@@ -498,16 +512,60 @@ func NewImports(c []byte) Imports {
 
 func (i*Imports) GetPath(name string) string {
 
-	for _,i := range i.imports {
-		splt := strings.Split(i, ".")
+	spltName := strings.Split(name, ".")
 
-		if splt[len(splt) - 1] == name {
-			return i
+	outPath := make([]string, 0, 100)
+
+
+	for _,imp := range i.imports {
+		spltImport := strings.Split(imp, ".")
+
+		nameIndex := 0
+
+		for ni, nameChunk := range spltName {
+			matchCount := 0
+
+			matching := false
+
+			for importChunkIndex, importChunk := range spltImport {
+
+				if !matching && importChunk == nameChunk {
+					matching = true
+					for a := 0; a < importChunkIndex; a++ {
+						outPath = append(outPath, spltImport[a])
+						//fmt.Println(spltImport[a])
+					}
+
+					outPath = append(outPath, importChunk)
+					matchCount++
+				} else if ni + matchCount >= len(spltName) || ( matching && importChunk !=  spltName[ni + matchCount] ){
+					matching = false
+					outPath = make([]string, 0, 100)
+					break
+				} else if matching {
+					outPath = append(outPath, importChunk)
+					nameIndex = ni
+					matchCount++
+				}
+			}
+			if matching {
+				for i := nameIndex + matchCount; i < len(spltName); i++  {
+					outPath = append(outPath, spltName[i])
+				}
+
+				return strings.Join(outPath, ".")
+			} else {
+				outPath = make([]string, 0, 100)
+				break
+			}
 		}
+
+
 	}
 
 	return i.packages[0] + "." + name
 }
+
 
 func (i*Imports) Print() {
 	//fmt.Println(i.imports)
