@@ -6,7 +6,56 @@ import (
 )
 
 
+// template tests
 
+func TestWithSuperAndMultipleIntefaces(t *testing.T) {
+
+
+	assert.Equal(t, "DiVater", "DiVater")
+}
+
+func TestRemoveTemplate(t *testing.T) {
+
+	str := "BaseGeometryTestCase<GeometryCollection<Geometry>>"
+
+	assert.Equal(t, "BaseGeometryTestCase", RemoveTemplate(str))
+}
+
+func TestRemoveMultipleTemplates(t *testing.T) {
+
+	str := "BaseGeometryTestCase<GeometryCollection<Geometry>> extends SomeSuperClass<SomeTemplate extends SomeSuperTemplate> implements SomeInterface<SomeInterfaceTemplate>"
+	assert.Equal(t, "BaseGeometryTestCase extends SomeSuperClass implements SomeInterface", RemoveTemplate(str))
+}
+func TestDoNotAlter(t *testing.T) {
+
+	str := "BaseGeometryTestCase extends SomeSuperClass implements SomeInterface"
+	assert.Equal(t, "BaseGeometryTestCase extends SomeSuperClass implements SomeInterface", RemoveTemplate(str))
+}
+
+
+func TestRemoveButDoesNotEndWithTemplate(t *testing.T) {
+
+	str := "BaseGeometryTestCase<GeometryCollection<Geometry>> extends SomeSuperClass<SomeTemplate extends SomeSuperTemplate> implements SomeInterface"
+	assert.Equal(t, "BaseGeometryTestCase extends SomeSuperClass implements SomeInterface", RemoveTemplate(str))
+}
+
+func TestRemoveTemplateAtEnd(t *testing.T) {
+
+	str := "BaseGeometryTestCase extends SomeSuperClass<SomeTemplate extends SomeSuperTemplate> implements SomeInterface<SomeInterfaceTemplate>"
+	assert.Equal(t, "BaseGeometryTestCase extends SomeSuperClass implements SomeInterface", RemoveTemplate(str))
+}
+
+	
+func TestRemoveTemplateMore(t *testing.T) {
+
+	str := "public class QueryToFilterAdapter<Q extends Query>"
+	assert.Equal(t, "public class QueryToFilterAdapter", RemoveTemplate(str))
+}
+
+
+
+
+/*
 func TestWithSuperAndMultipleIntefaces(t *testing.T) {
 
 	class := NewClass("public class DiniMuetter extends DiVater implements Parents,Elders {", "")
@@ -64,5 +113,5 @@ func TestWithInterfacesOnly(t *testing.T) {
 
 	assert.Equal(t, "public", class.GetVis())
 	assert.Equal(t, "DiniMuetter", class.GetName())	
-}
+} */
 

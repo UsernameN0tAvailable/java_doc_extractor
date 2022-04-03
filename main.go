@@ -26,7 +26,7 @@ const (
 var tot int = 0
 
 var classes []Class = make([]Class, 0)
-var interfaces []string = make([]string, 0)
+var interfaces []Interface = make([]Interface, 0)
 
 
 func main() {
@@ -57,6 +57,19 @@ func main() {
 		}	
 	} 
 
+
+	for _, c := range interfaces {
+		super := c.GetSuper()
+		fmt.Println("")
+		fmt.Println(c.GetName())
+		fmt.Println("\tdoc:", c.GetDocLinesCount())
+		if len(super) > 0 {
+			fmt.Println("\tsuper:",super)
+		}	
+	} 
+
+
+
 	fmt.Println("\ntot classes", len(classes))
 	fmt.Println("tot interfaces", len(interfaces))
 	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
@@ -79,7 +92,30 @@ func main() {
 	}
 
 	fmt.Println("tot imports: ", (totS - totFound))
+
+
+	found := 0
+
+	//shouldFind := make([]string, 0)
+
+	hasExtends := 0
+
+	for _,c := range classes {
+		super := c.GetSuper()
+		if len(super) > 0 {
+			hasExtends++
+			for _,c0 := range classes {
+				if super == c0.GetName() {
+					found++
+					break
+				}
+			}
+		}
+	}
+
+	fmt.Println("extends within project:", hasExtends, ",extends imported", hasExtends - found)
 }
+
 
 func listDirs(root string) {
 
@@ -171,10 +207,15 @@ func parseFile(content []byte, path string) {
 			} else {
 				signature = findSignature(i - 1, content, lastElementEnd)
 			}
+
+
+			//fmt.Println(signature)
+
 			scopeCount++
 			if isValidSignature(signature) {	
 				//fmt.Println(doc)
 				//fmt.Println(signature)
+
 				storeSignature(signature, doc, path, &imports)
 			} 
 
@@ -214,15 +255,9 @@ func storeSignature(s string, doc string, path string, imports *Imports) {
 	if isClass {
 		classes = append(classes, NewClass(s, doc, strings.Split(path, "java/")[1], imports))
 	} else if isInterface {
-		interfaces = append(interfaces, s)
-		//fmt.Print(s)
+		interfaces = append(interfaces, NewInterface(s, doc, strings.Split(path,"java/")[1], imports))
 	}
 
-
-	//fmt.Println(fields)
-
-
-	//os.Exit(3)
 }
 
 func isValidSignature(s string) bool {
@@ -265,8 +300,10 @@ func findFirstSignature(i int, content []byte) []byte {
 
 	end := i
 
+	//fmt.Println("first", string(content[i]))
+
 	for true {
-		if i == 0 || ( content[i] == newLine || content[i] == semiColumn) {
+		if i == 0 || ( content[i] == slash || content[i] == semiColumn) {
 			return content[i:end]
 		} else if i >= 1 {
 			i--
@@ -283,7 +320,13 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 
 	bracketScopeCount := 0 
 
+	//fmt.Println("content")
+	//o := string(content[lastElementEnd:i])
+
 	for true {
+
+		//	fmt.Println(o)
+
 		if i == lastElementEnd ||( bracketScopeCount == 0 && (content[i] == scopeOff || content[i] == slash || i == lastElementEnd || content[i] == semiColumn || content[i] == scopeOn)) {
 
 			var s string
@@ -296,7 +339,8 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 
 
 			splt := strings.Split(s, "\n")
-			if len(splt) <= 1 {return ""}
+			//fmt.Println(splt)
+			//if len(splt) <= 1 {return ""}
 
 			startIndex := 0
 
