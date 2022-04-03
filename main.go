@@ -28,6 +28,8 @@ var tot int = 0
 type Extractor struct {
 	classes []Class
 	interfaces []Interface
+	activeClasses []*Class
+	activeClass *Class
 }
 
 func (e*Extractor) GetClasses() []Class {
@@ -53,15 +55,24 @@ func (e *Extractor) Extract(rootArg string) {
 	for _, c := range e.classes {
 		super := c.GetSuper()
 		in := c.GetInterfaces()
+		methods := c.GetMethods()
 		fmt.Println("")
 		fmt.Println(c.GetName())
-		fmt.Println("\tdoc:", c.GetDocLinesCount())
+		fmt.Println("  doc:", c.GetDocLinesCount())
 		if len(super) > 0 {
-			fmt.Println("\tsuper:",super)
+			fmt.Println("  super:",super)
 		}
 		if len(in) > 0 {
-			fmt.Println("\tinterfaces:", in)
+			fmt.Println("  interfaces:", in)
 		}	
+
+		if len(methods) > 0 {
+			fmt.Println("  methods")
+			for _,m := range methods {
+				fmt.Println("    ",m.GetDoc())
+				fmt.Println("    ",m.GetSignature())
+			}
+		}
 	} 
 
 
@@ -74,7 +85,6 @@ func (e *Extractor) Extract(rootArg string) {
 			fmt.Println("\tsuper:",super)
 		}	
 	} 
-
 
 
 	fmt.Println("\ntot classes", len(e.classes))
@@ -134,7 +144,7 @@ func main() {
 		return
 	}
 
-	extractor := Extractor{classes: make([]Class, 0, 20000), interfaces: make([]Interface, 0, 10000)}
+	extractor := Extractor{classes: make([]Class, 0, 20000), interfaces: make([]Interface, 0, 10000), activeClasses: make([]*Class, 0, 200), activeClass: nil}
 
 	extractor.Extract(os.Args[1])
 }
@@ -235,18 +245,45 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			//fmt.Println(signature)
 
 			scopeCount++
+			isClass := false
 			if isValidSignature(signature) {	
-				//fmt.Println(doc)
-				//fmt.Println(signature)
-
-				e.storeSignature(signature, doc, path, &imports)
+				isClass = e.storeSignature(signature, doc, path, &imports) 	
 			} 
+
+			if isClass {
+				active := &e.classes[len(e.classes) - 1]
+				e.activeClasses = append(e.activeClasses, active)
+				e.activeClass = active
+			} else {
+				//active = nil
+				e.activeClasses = append(e.activeClasses, nil)
+			}
 
 			lastElementEnd = i
 
 		} else if c == scopeOff && !inComment && !inString {
 			scopeCount--
 			lastElementEnd = i
+			doc = ""
+
+			// pop class
+			active := e.activeClasses[len(e.activeClasses) - 1]
+
+			if active != nil {
+				e.activeClasses = e.activeClasses[:(len(e.activeClasses) - 1)]
+				
+				// find last used class
+				// because inner class could be inside
+				// of method
+				for i := len(e.activeClasses) - 1; i >= 0; i -- {
+					if e.activeClasses[i] != nil {
+						e.activeClass = e.activeClasses[i]
+						e.activeClasses = e.activeClasses[:(i+1)]
+						break
+					}
+				}
+			}
+
 		} else if c == str {
 			inString = !inString
 		} else if c == newLine && inInlineComment && !inString  {
@@ -258,7 +295,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 }
 
 
-func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) {
+func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) bool {
 
 	isClass := false
 	isInterface := false
@@ -272,15 +309,29 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 		} else if fT == "interface" {
 			isInterface = true
 			break
-		}
+		} 
+	}
+
+	p := strings.Split(path, "java/")
+
+	var pathIn string
+
+	if len(p) < 2 {
+		pathIn = path
+	} else {
+		pathIn = p[1] 
 	}
 
 	if isClass {
-		e.classes = append(e.classes, NewClass(s, doc, strings.Split(path, "java/")[1], imports))
+		e.classes = append(e.classes, NewClass(s, doc, pathIn, imports))
 	} else if isInterface {
-		e.interfaces = append(e.interfaces, NewInterface(s, doc, strings.Split(path,"java/")[1], imports))
+		e.interfaces = append(e.interfaces, NewInterface(s, doc, pathIn, imports))
+	} else // method
+	{
+		e.activeClass.AppendMethod(NewMethod(s, doc))
 	}
 
+	return isClass
 }
 
 func isValidSignature(s string) bool {

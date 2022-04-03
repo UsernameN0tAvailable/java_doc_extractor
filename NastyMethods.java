@@ -10,7 +10,19 @@ package org.elasticsearch.gradle.testkit;
 import org.junit.Assert;
 import org.junit.Test;
 
+
+/**
+ *
+ * Some doc tho
+ *
+ *
+ * */
 public class NastyInnerClasses {
+
+	/**
+	 * method 1 doc
+	 *
+	 * */
 
 	public int method1() {
 
@@ -33,7 +45,10 @@ public class NastyInnerClasses {
 		return 12;
 
 	}
-
+	/**
+	 * method 3 doc
+	 *
+	 * */
 	int method3(String[] params, int numba) {
 
 		if (1 > 2) {
