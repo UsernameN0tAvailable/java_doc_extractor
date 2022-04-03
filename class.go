@@ -69,8 +69,16 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 		name: className,
 		super: super,
 		interfaces: implements,
-		methods: make([]Method, 0),
+		methods: make([]Method, 0, 20),
 	} 
+}
+
+func (c*Class) GetMethods() []Method {
+	return c.methods
+}
+
+func (c * Class) AppendMethod(m Method) {
+	c.methods = append(c.methods, m)
 }
 
 func (c * Class) GetPath() string {
