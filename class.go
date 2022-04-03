@@ -1,8 +1,22 @@
 package main
 
 import (
+	//	"fmt"
+	//	"os"
+	//	"fmt"
+	//	"fmt"
+	//"fmt"
 	"strings"
 )
+
+type Scope interface {
+	IsClass() bool
+	IsInterface() bool
+	AppendMethod(m Method)
+	GetName() string
+}
+
+
 type Class struct {
 	path string
 	doc string
@@ -11,15 +25,21 @@ type Class struct {
 	super string
 	methods []Method
 	interfaces []string
+	staticIndex int
+	fullPath string
 }
 
-func NewClass(signature string, doc string, path string, imports *Imports) Class {
+func (c*Class) IsClass() bool {return true}
+func (c*Class) IsInterface() bool {return false}
 
-	fields := strings.Fields(RemoveTemplate(signature))
+func NewClass(fullPath string, signature string, doc string, path string, imports *Imports, scope Scope) Class {
+
+	fields := strings.Fields(strings.TrimSpace(RemoveTemplate(signature)))
 
 	classIndex := -1 
 	extendIndex := -1 
 	implementsIndex := -1
+	staticIndex := -1
 	for i, p := range fields {
 		if p == "class" {
 			classIndex = i
@@ -27,8 +47,12 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 			extendIndex = i
 		} else if p == "implements" {
 			implementsIndex = i
+		} else if p == "static" {
+			staticIndex = i
 		}
 	}
+
+	name := fields[classIndex + 1]
 
 	var vis string 
 
@@ -38,14 +62,32 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 		vis = strings.Join(fields[:classIndex], " ")
 	}
 
-	className :=strings.Join(strings.Split(strings.Split(path, ".java")[0], "/"), ".")
+	pathSplt := strings.Split(strings.Split(path, ".java")[0], "/")
+
+
+	className := strings.Join(pathSplt, ".")
+	if scope != nil && scope.IsClass() {
+		//fmt.Println("class", name, scope.GetName())	
+		if staticIndex == -1 {
+			pathSplt[len(pathSplt) - 1] = name 
+			className = strings.Join(pathSplt, ".")
+		}  else {
+			className = scope.GetName() + "." + name
+		}
+		//fmt.Println(className)
+	} else if scope != nil && scope.IsInterface() {
+		//fmt.Println("interface", name, scope.GetName())
+		pathSplt = append(pathSplt, name)
+		className = scope.GetName() + "." + name
+		//fmt.Println(className)
+		//fmt.Println(scope.GetName(), name)
+	}
 
 	var super string
 
 	if extendIndex < 1 {
 		super = ""
 	} else {
-
 		toFind :=RemoveTemplate(fields[extendIndex + 1])
 		super = imports.GetPath(toFind)
 	}
@@ -63,18 +105,32 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 	}
 
 	return Class{
+		fullPath: fullPath,
+		staticIndex: staticIndex,
 		path: path,
 		doc: doc, 
 		visibility: vis,
-		name: className,
+		name: strings.TrimSpace(className),
 		super: super,
 		interfaces: implements,
-		methods: make([]Method, 0),
+		methods: make([]Method, 0, 20),
 	} 
+}
+
+func (c*Class) GetMethods() []Method {
+	return c.methods
+}
+
+func (c * Class) AppendMethod(m Method) {
+	c.methods = append(c.methods, m)
 }
 
 func (c * Class) GetPath() string {
 	return c.path
+}
+
+func (c * Class) GetFullPath() string {
+	return c.fullPath
 }
 
 func (c* Class) GetDocLinesCount() int {
@@ -114,6 +170,9 @@ type Interface struct {
 	super string
 	methods []Method
 }
+
+func (c *Interface)IsClass() bool { return false}
+func (c *Interface)IsInterface() bool {return true}
 
 func NewInterface(signature string, doc string, path string, imports *Imports) Interface {
 
@@ -201,6 +260,11 @@ func (c* Interface) GetName() string {
 func (c* Interface) GetSuper() string {
 	return c.super
 }
+
+func (c * Interface) AppendMethod(m Method) {
+	c.methods = append(c.methods, m)
+}
+
 
 
 //public to tst helper
