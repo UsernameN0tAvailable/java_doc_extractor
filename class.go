@@ -1,6 +1,7 @@
 package main
 
 import (
+//	"fmt"
 	"strings"
 )
 
@@ -41,6 +42,8 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 	}
 
 	className :=strings.Join(strings.Split(strings.Split(path, ".java")[0], "/"), ".")
+
+	//fmt.Println(className)
 
 	//fmt.Println(path)
 
