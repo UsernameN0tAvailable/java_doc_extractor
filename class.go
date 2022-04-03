@@ -102,7 +102,7 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 		for _,in := range strings.Split(interfacesStr, ",") {
 			toFind := RemoveTemplate(strings.TrimSpace(in))
 			implements = append(implements, imports.GetPath(toFind))
-		}
+		}	
 	}
 
 	return Class{

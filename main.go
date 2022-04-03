@@ -53,103 +53,6 @@ func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
 
 	e.listDirs(root)
 
-	/*
-	for _, c := range e.classes {
-		super := c.GetSuper()
-		in := c.GetInterfaces()
-		methods := c.GetMethods()
-		fmt.Println("")
-		fmt.Println(c.GetName())
-		fmt.Println("  doc:", c.GetDocLinesCount())
-		if len(super) > 0 {
-			fmt.Println("  super:",super)
-		}
-		if len(in) > 0 {
-			fmt.Println("  interfaces:", in)
-		}	
-
-		if len(methods) > 0 {
-			fmt.Println("  methods")
-			for _,m := range methods {
-				fmt.Println("    ",m.GetDoc())
-				fmt.Println("    ",m.GetSignature())
-			}
-		}
-	} 
-
-
-	for _, c := range e.interfaces {
-		super := c.GetSuper()
-		fmt.Println("")
-		fmt.Println(c.GetName())
-		fmt.Println("\tdoc:", c.GetDocLinesCount())
-		if len(super) > 0 {
-			fmt.Println("\tsuper:",super)
-		}	
-	}  */
-
-
-	//	fmt.Println("\ntot classes", len(e.classes))
-	//	fmt.Println("tot interfaces", len(e.interfaces))
-	//	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
-
-	// search matching super inside of project
-
-	notFound := make([]string, 0, 10000)
-
-	for _,class := range e.classes {
-
-		superClass := class.GetSuper()
-
-		if len(superClass) > 0 {
-
-
-			found := false
-
-			for _,inClass := range e.classes {
-
-				if inClass.GetName() == superClass {
-					found = true
-					break
-				}
-			}
-
-			if !found {
-
-				foundInNotFound := false
-
-				for _,fn := range notFound {
-					if fn == superClass {
-						foundInNotFound = true
-						break
-					}
-
-				}
-
-				isInProject := false
-
-				for _,s := range strings.Split(superClass, ".") {
-					if s == "elasticsearch" {
-						isInProject = true
-						break
-					}
-				}
-
-				//fmt.Println(ii)
-
-				if !foundInNotFound && isInProject {
-					notFound = append(notFound, superClass)
-					fmt.Println("=================================")
-					fmt.Println(class.GetFullPath())
-					fmt.Println(class.GetName())
-					fmt.Println(superClass)
-				}
-			}
-		}
-	}
-
-	//fmt.Println("not found", len(notFound), "over", len(e.classes))
-
 	return e.classes, e.interfaces
 }
 
@@ -170,7 +73,7 @@ func main() {
 
 	classes, _ :=extractor.Extract(os.Args[1])
 
-	jsonOut, err := json.MarshalIndent(classes[:100], "", "\t")
+	jsonOut, err := json.MarshalIndent(classes, "", "\t")
 
 	if err == nil {
 		fmt.Println(string(jsonOut))
@@ -420,7 +323,7 @@ func isValidSignature(s string) bool {
 }
 
 func isValidSignatureKeyWord(predicate string) bool {
-	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized"
+	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized" && predicate != "="
 }
 
 
