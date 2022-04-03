@@ -4,7 +4,8 @@ import (
 	//	"fmt"
 	//	"os"
 	//	"fmt"
-	"fmt"
+	//	"fmt"
+	//"fmt"
 	"strings"
 )
 
@@ -33,7 +34,7 @@ func (c*Class) IsInterface() bool {return false}
 
 func NewClass(fullPath string, signature string, doc string, path string, imports *Imports, scope Scope) Class {
 
-	fields := strings.Fields(RemoveTemplate(signature))
+	fields := strings.Fields(strings.TrimSpace(RemoveTemplate(signature)))
 
 	classIndex := -1 
 	extendIndex := -1 
@@ -63,20 +64,24 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 
 	pathSplt := strings.Split(strings.Split(path, ".java")[0], "/")
 
+
 	className := strings.Join(pathSplt, ".")
 	if scope != nil && scope.IsClass() {
-		pathSplt[len(pathSplt) - 1] = name 
-		className = strings.Join(pathSplt, ".")
-	} else if scope != nil && scope.IsInterface() && staticIndex > -1{
+		//fmt.Println("class", name, scope.GetName())	
+		if staticIndex == -1 {
+			pathSplt[len(pathSplt) - 1] = name 
+			className = strings.Join(pathSplt, ".")
+		}  else {
+			className = scope.GetName() + "." + name
+		}
+		//fmt.Println(className)
+	} else if scope != nil && scope.IsInterface() {
+		//fmt.Println("interface", name, scope.GetName())
 		pathSplt = append(pathSplt, name)
 		className = scope.GetName() + "." + name
-		fmt.Println(className)
+		//fmt.Println(className)
 		//fmt.Println(scope.GetName(), name)
 	}
-
-
-
-	fmt.Println("add", className)
 
 	var super string
 
@@ -98,12 +103,6 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 			implements = append(implements, imports.GetPath(toFind))
 		}
 	}
-
-	/*
-	if staticIndex > -1 {
-		fmt.Println(path, className, super)
-		os.Exit(3)
-	}*/
 
 	return Class{
 		fullPath: fullPath,

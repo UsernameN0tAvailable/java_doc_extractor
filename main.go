@@ -15,6 +15,7 @@ const (
 	slash = byte('/')
 	star = byte('*')
 	str = byte('"')
+	char = byte('\'')
 	newLine = byte('\n') // only works on unix systems
 	tab = byte('\t')
 	at = byte('@') 
@@ -46,7 +47,7 @@ func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
 
 	if err != nil {
 		fmt.Println(err)
-	        panic("no file")	
+		panic("no file")	
 	}
 
 	e.listDirs(root)
@@ -146,7 +147,7 @@ func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
 		}
 	}
 
-	//fmt.Println("not found", len(notFound))
+	fmt.Println("not found", len(notFound))
 
 	return e.classes, e.interfaces
 }
@@ -199,11 +200,64 @@ func (e* Extractor) parseJavaFile(filePath string) {
 		return
 	}
 
+//	actualContent := removeInlineComments(content)
+
+	//fmt.Println(string(actualContent))
+
 	e.parseFile(content, filePath)
 
-	//os.Exit(3)
-
 }
+/*
+func removeInlineComments(data []byte) []byte {
+
+	inString := false
+
+
+	for i,d := range data {
+		if d == byte('"')  {
+			inString = !inString
+		} 
+
+		if !inString && len(data)  > i + 1 && d == slash && data[d+1] == slash {
+
+			start := d
+			toCut := i
+
+			for in := i; in < len(data); in++ {
+				if data[in] != newLine {
+					toCut = in + 1
+				} else {
+					toCut = in
+					break
+				}
+			}
+
+			
+
+
+		}
+
+
+	}
+
+	content := string(data)
+
+
+
+
+
+	spl := strings.Split(content, "//")
+
+	out := make([]string, 0, len(spl))
+
+	for _, s := range spl {
+		nlspl := strings.Split(s, "\n")
+
+		out = append(out, "\n" + strings.Join(nlspl[1:], "\n"))
+	}
+
+	return []byte(strings.Join(out, ""))
+} */
 
 func (e* Extractor) parseFile(content []byte, path string) {
 
@@ -213,6 +267,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 	inInlineComment := false
 	inDocumentation := false
 	inString := false
+	inChar := false
 
 	start := 0
 	lastElementEnd := 0
@@ -226,7 +281,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 	for i, c := range content {
 
-		if c == slash && !inString {
+		if c == slash && !inString && !inChar {
 			nextIndex := i + 1
 			prevIndex := i - 1
 			if !inComment && nextIndex < len(content) && star == content[nextIndex] {
@@ -250,7 +305,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				lastElementEnd = i
 			}
 
-		} else if c == scopeOn && !inComment && !inString {
+		} else if c == scopeOn && !inComment && !inString && !inChar {
 
 			var signature string
 			if scopeCount == 0 {
@@ -259,15 +314,24 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				signature = findSignature(i - 1, content, lastElementEnd)
 			}
 
+			sigArr := make([]string, 0, 10)
 
-			//fmt.Println(signature)
+			for _,s := range strings.Split(signature, "\n") {
+				if len(s) > 0 && s[0] != slash {
+					sigArr = append(sigArr, s)
+				}
+			}
+
+
+			signature = strings.Join(sigArr, "\n")
+			//fmt.Println("dude", signature)
 
 			scopeCount++
 			isClass := false
 			isInterface := false
 			if isValidSignature(signature) {	
 				isClass, isInterface = e.storeSignature(signature, doc, path, &imports) 	
-			} 
+			}
 
 			if isClass {
 				active := &e.classes[len(e.classes) - 1]
@@ -280,40 +344,47 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				//active = nil
 			} else {
 				e.activeClasses = append(e.activeClasses, nil)
-			}
-
+			} 
 			lastElementEnd = i
 
-		} else if c == scopeOff && !inComment && !inString {
+		} else if c == scopeOff && !inComment && !inString && !inChar {
 			scopeCount--
 			lastElementEnd = i
 			doc = ""
 
-			// pop class
-			active := e.activeClasses[len(e.activeClasses) - 1]
+			e.activeClasses = e.activeClasses[:(len(e.activeClasses) - 1)]
+			if len(e.activeClasses) > 0 {
+				e.activeClass = e.activeClasses[len(e.activeClasses) - 1]
+				active := e.activeClasses[len(e.activeClasses) - 1]
 
-			if active != nil {
-				e.activeClasses = e.activeClasses[:(len(e.activeClasses) - 1)]
-
-				// find last used class
-				// because inner class could be inside
-				// of method
-				for i := len(e.activeClasses) - 1; i >= 0; i -- {
-					if e.activeClasses[i] != nil {
-						e.activeClass = e.activeClasses[i]
-						e.activeClasses = e.activeClasses[:(i+1)]
-						break
+				if active == nil {
+					// find last used class
+					// because inner class could be inside
+					// of method
+					for i := len(e.activeClasses) - 1; i >= 0; i -- {
+						if e.activeClasses[i] != nil {
+							active = e.activeClasses[i]
+							break
+						}
 					}
+
+					e.activeClass = active
 				}
-			}
+				//fmt.Println(active.GetName(), scopeCount, len(e.activeClasses), e.activeClasses[0] == nil)
+			} else {
+				e.activeClass = nil
+			}	
 
 		} else if c == str {
 			inString = !inString
-		} else if c == newLine && inInlineComment && !inString  {
+		} else if c == newLine && inInlineComment && !inString && !inChar  {
 			inComment = false
 			inInlineComment = false
 			lastElementEnd = i
+		} else if c == char {
+			inChar = !inChar
 		}
+
 	}
 }
 
@@ -326,7 +397,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 
 	for _, f := range fields {
 		fT := strings.TrimSpace(f)
-		if fT == "class" {
+		if fT == "class" || fT == "enum" || fT == "record" {
 			isClass = true
 			break
 		} else if fT == "interface" {
@@ -335,9 +406,9 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 		} 
 	}
 
-	p := strings.Split(path, "java/")
-
 	var pathIn string
+
+	p := strings.Split(path, "/java/")
 
 	if len(p) < 2 {
 		pathIn = path
@@ -349,7 +420,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 		e.classes = append(e.classes, NewClass(path, s, doc, pathIn, imports, e.activeClass))
 	} else if isInterface {
 		e.interfaces = append(e.interfaces, NewInterface(s, doc, pathIn, imports))
-	} else // method
+	} else
 	{
 		e.activeClass.AppendMethod(NewMethod(s, doc))
 	}
@@ -397,11 +468,20 @@ func findFirstSignature(i int, content []byte) []byte {
 
 	end := i
 
-	//fmt.Println("first", string(content[i]))
-
 	for true {
 		if i == 0 || ( content[i] == slash || content[i] == semiColumn) {
-			return content[i:end]
+
+			sig := strings.Split(strings.TrimSpace(string(content[i:end])), "\n")
+
+			startI := 0
+			if len(sig) > 0 {
+				for i := 0; i< len(sig); i++ {
+					if len(sig[i]) == 0 || sig[i][0] == at {
+						startI = i + 1
+					}
+				}
+			}
+			return []byte(strings.Join(sig[startI:], "\n"))
 		} else if i >= 1 {
 			i--
 		}
@@ -416,13 +496,7 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 	end := i
 
 	bracketScopeCount := 0 
-
-	//fmt.Println("content")
-	//o := string(content[lastElementEnd:i])
-
 	for true {
-
-		//	fmt.Println(o)
 
 		if i == lastElementEnd ||( bracketScopeCount == 0 && (content[i] == scopeOff || content[i] == slash || i == lastElementEnd || content[i] == semiColumn || content[i] == scopeOn)) {
 
@@ -436,9 +510,6 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 
 
 			splt := strings.Split(s, "\n")
-			//fmt.Println(splt)
-			//if len(splt) <= 1 {return ""}
-
 			startIndex := 0
 
 			for i, c := range splt {
