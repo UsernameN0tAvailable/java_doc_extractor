@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"encoding/json"
 )
 
 
@@ -147,10 +148,12 @@ func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
 		}
 	}
 
-	fmt.Println("not found", len(notFound), "over", len(e.classes))
+	//fmt.Println("not found", len(notFound), "over", len(e.classes))
 
 	return e.classes, e.interfaces
 }
+
+
 
 
 
@@ -165,7 +168,16 @@ func main() {
 
 	extractor := Extractor{classes: make([]Class, 0, 20000), interfaces: make([]Interface, 0, 10000), activeClasses: make([]Scope, 0, 200), activeClass: nil}
 
-	extractor.Extract(os.Args[1])
+	classes, _ :=extractor.Extract(os.Args[1])
+
+	jsonOut, err := json.MarshalIndent(classes[:100], "", "\t")
+
+	if err == nil {
+		fmt.Println(string(jsonOut))
+	} else {
+		fmt.Println("error", err)
+	}
+
 }
 
 
