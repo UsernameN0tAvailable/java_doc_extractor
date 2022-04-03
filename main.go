@@ -79,7 +79,44 @@ func main() {
 	}
 
 	fmt.Println("tot imports: ", (totS - totFound))
+
+
+	found := 0
+
+	shouldFind := make([]string, 0)
+
+	for _,c := range classes {
+		super := c.GetSuper()
+		isFound := false
+		for _,c0 := range classes {
+			if super == c0.GetName() {
+				isFound = true
+				found++
+				break
+			}
+		}
+
+
+		if !isFound {
+			splt := strings.Split(super, ".")
+			for _,s := range splt {
+				if s == "elasticsearch" {
+					shouldFind = append(shouldFind, super)
+					break
+				}
+			}
+		}
+	}
+	fmt.Println("Not Found")
+
+	for _,nf := range shouldFind {
+		fmt.Println(nf)
+	}
+
+	//fmt.Println(shouldFind)
+	fmt.Println("should find", len(shouldFind))
 }
+
 
 func listDirs(root string) {
 
