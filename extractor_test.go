@@ -45,7 +45,7 @@ func TestNasty(t *testing.T) {
 	}
 
 	for _,in := range interfaces {
-		fmt.Println(in.GetName())
+		fmt.Println(in.GetName(), "in")
 	}
 
 	//str := "public class QueryToFilterAdapter<Q extends Query>"
