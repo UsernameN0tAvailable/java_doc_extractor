@@ -30,6 +30,14 @@ type Extractor struct {
 	interfaces []Interface
 }
 
+func (e*Extractor) GetClasses() []Class {
+	return e.classes
+}
+
+func (e*Extractor) GetInterfaces() []Interface {
+	return e.interfaces
+}
+
 func (e *Extractor) Extract(rootArg string) {
 
 	root, err := filepath.Abs(rootArg)
