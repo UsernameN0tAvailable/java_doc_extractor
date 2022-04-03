@@ -15,6 +15,7 @@ const (
 	slash = byte('/')
 	star = byte('*')
 	str = byte('"')
+	char = byte('\'')
 	newLine = byte('\n') // only works on unix systems
 	tab = byte('\t')
 	at = byte('@') 
@@ -25,8 +26,132 @@ const (
 
 var tot int = 0
 
-var classes []Class = make([]Class, 0)
-var interfaces []Interface = make([]Interface, 0)
+type Extractor struct {
+	classes []Class
+	interfaces []Interface
+	activeClasses []Scope
+	activeClass Scope 
+}
+
+func (e*Extractor) GetClasses() []Class {
+	return e.classes
+}
+
+func (e*Extractor) GetInterfaces() []Interface {
+	return e.interfaces
+}
+
+func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
+
+	root, err := filepath.Abs(rootArg)
+
+	if err != nil {
+		fmt.Println(err)
+		panic("no file")	
+	}
+
+	e.listDirs(root)
+
+	/*
+	for _, c := range e.classes {
+		super := c.GetSuper()
+		in := c.GetInterfaces()
+		methods := c.GetMethods()
+		fmt.Println("")
+		fmt.Println(c.GetName())
+		fmt.Println("  doc:", c.GetDocLinesCount())
+		if len(super) > 0 {
+			fmt.Println("  super:",super)
+		}
+		if len(in) > 0 {
+			fmt.Println("  interfaces:", in)
+		}	
+
+		if len(methods) > 0 {
+			fmt.Println("  methods")
+			for _,m := range methods {
+				fmt.Println("    ",m.GetDoc())
+				fmt.Println("    ",m.GetSignature())
+			}
+		}
+	} 
+
+
+	for _, c := range e.interfaces {
+		super := c.GetSuper()
+		fmt.Println("")
+		fmt.Println(c.GetName())
+		fmt.Println("\tdoc:", c.GetDocLinesCount())
+		if len(super) > 0 {
+			fmt.Println("\tsuper:",super)
+		}	
+	}  */
+
+
+	//	fmt.Println("\ntot classes", len(e.classes))
+	//	fmt.Println("tot interfaces", len(e.interfaces))
+	//	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
+
+	// search matching super inside of project
+
+	notFound := make([]string, 0, 10000)
+
+	for _,class := range e.classes {
+
+		superClass := class.GetSuper()
+
+		if len(superClass) > 0 {
+
+
+			found := false
+
+			for _,inClass := range e.classes {
+
+				if inClass.GetName() == superClass {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+
+				foundInNotFound := false
+
+				for _,fn := range notFound {
+					if fn == superClass {
+						foundInNotFound = true
+						break
+					}
+
+				}
+
+				isInProject := false
+
+				for _,s := range strings.Split(superClass, ".") {
+					if s == "elasticsearch" {
+						isInProject = true
+						break
+					}
+				}
+
+				//fmt.Println(ii)
+
+				if !foundInNotFound && isInProject {
+					notFound = append(notFound, superClass)
+					fmt.Println("=================================")
+					fmt.Println(class.GetFullPath())
+					fmt.Println(class.GetName())
+					fmt.Println(superClass)
+				}
+			}
+		}
+	}
+
+	fmt.Println("not found", len(notFound), "over", len(e.classes))
+
+	return e.classes, e.interfaces
+}
+
 
 
 func main() {
@@ -38,92 +163,19 @@ func main() {
 		return
 	}
 
-	root, _ := filepath.Abs(os.Args[1])
+	extractor := Extractor{classes: make([]Class, 0, 20000), interfaces: make([]Interface, 0, 10000), activeClasses: make([]Scope, 0, 200), activeClass: nil}
 
-	listDirs(root)
-
-
-	for _, c := range classes {
-		super := c.GetSuper()
-		in := c.GetInterfaces()
-		fmt.Println("")
-		fmt.Println(c.GetName())
-		fmt.Println("\tdoc:", c.GetDocLinesCount())
-		if len(super) > 0 {
-			fmt.Println("\tsuper:",super)
-		}
-		if len(in) > 0 {
-			fmt.Println("\tinterfaces:", in)
-		}	
-	} 
-
-
-	for _, c := range interfaces {
-		super := c.GetSuper()
-		fmt.Println("")
-		fmt.Println(c.GetName())
-		fmt.Println("\tdoc:", c.GetDocLinesCount())
-		if len(super) > 0 {
-			fmt.Println("\tsuper:",super)
-		}	
-	} 
-
-
-
-	fmt.Println("\ntot classes", len(classes))
-	fmt.Println("tot interfaces", len(interfaces))
-	fmt.Println("tot files scanned: " + fmt.Sprint(tot))	
-
-	// search matching super inside of project
-	totS := 0
-	totFound := 0
-
-	for _,c := range classes {
-		super := c.GetSuper()
-		if len(super) > 0 {
-			for _,cc := range classes {
-				if cc.GetName() == super {
-					totFound++
-					break
-				}
-			}
-			totS++
-		}
-	}
-
-	fmt.Println("tot imports: ", (totS - totFound))
-
-
-	found := 0
-
-	//shouldFind := make([]string, 0)
-
-	hasExtends := 0
-
-	for _,c := range classes {
-		super := c.GetSuper()
-		if len(super) > 0 {
-			hasExtends++
-			for _,c0 := range classes {
-				if super == c0.GetName() {
-					found++
-					break
-				}
-			}
-		}
-	}
-
-	fmt.Println("extends within project:", hasExtends, ",extends imported", hasExtends - found)
+	extractor.Extract(os.Args[1])
 }
 
 
-func listDirs(root string) {
+func (e *Extractor) listDirs(root string) {
 
 	files, err := ioutil.ReadDir(root)
 
 	if err != nil {
 		fmt.Println(err)
-		parseJavaFile(root)
+		e.parseJavaFile(root)
 
 		return
 	}
@@ -131,14 +183,14 @@ func listDirs(root string) {
 		file := files[fileIndex]
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
-			parseJavaFile(root + string(os.PathSeparator) + file.Name())
+			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
 		} else if file.IsDir() {
-			listDirs(root + string(os.PathSeparator) + file.Name())
+			e.listDirs(root + string(os.PathSeparator) + file.Name())
 		}
 	}
 }
 
-func parseJavaFile(filePath string) {
+func (e* Extractor) parseJavaFile(filePath string) {
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -147,21 +199,19 @@ func parseJavaFile(filePath string) {
 		fmt.Println("Couldnt read file at: " + filePath)
 		return
 	}
-
-	parseFile(content, filePath)
-
-	//os.Exit(3)
+	e.parseFile(content, filePath)
 
 }
 
-func parseFile(content []byte, path string) {
+func (e* Extractor) parseFile(content []byte, path string) {
 
-	//fmt.Println(path)
+	//fmt.Println(string(content))
 
 	inComment := false
 	inInlineComment := false
 	inDocumentation := false
 	inString := false
+	inChar := false
 
 	start := 0
 	lastElementEnd := 0
@@ -171,11 +221,11 @@ func parseFile(content []byte, path string) {
 
 	imports := NewImports(content)
 
-	//fmt.Println(imports)
-
 	for i, c := range content {
 
-		if c == slash && !inString {
+		//fmt.Println(inString, inChar)
+
+		if c == slash && !inString && !inChar {
 			nextIndex := i + 1
 			prevIndex := i - 1
 			if !inComment && nextIndex < len(content) && star == content[nextIndex] {
@@ -199,7 +249,9 @@ func parseFile(content []byte, path string) {
 				lastElementEnd = i
 			}
 
-		} else if c == scopeOn && !inComment && !inString {
+		} else if c == scopeOn && !inComment && !inString && !inChar {
+
+			//fmt.Println("scope on")
 
 			var signature string
 			if scopeCount == 0 {
@@ -208,34 +260,84 @@ func parseFile(content []byte, path string) {
 				signature = findSignature(i - 1, content, lastElementEnd)
 			}
 
-
 			//fmt.Println(signature)
 
+			sigArr := make([]string, 0, 10)
+
+			for _,s := range strings.Split(signature, "\n") {
+				if len(s) > 0 && s[0] != slash {
+					sigArr = append(sigArr, s)
+				}
+			}
+
+
+			signature = strings.Join(sigArr, "\n")
+			//fmt.Println("dude", signature)
+
 			scopeCount++
+			isClass := false
+			isInterface := false
 			if isValidSignature(signature) {	
-				//fmt.Println(doc)
-				//fmt.Println(signature)
+				isClass, isInterface = e.storeSignature(signature, doc, path, &imports) 	
+			}
 
-				storeSignature(signature, doc, path, &imports)
+			if isClass {
+				active := &e.classes[len(e.classes) - 1]
+				e.activeClasses = append(e.activeClasses, active)
+				e.activeClass = active
+			} else if isInterface {
+				active := &e.interfaces[len(e.interfaces) - 1]
+				e.activeClasses = append(e.activeClasses, active)
+				e.activeClass = active
+				//active = nil
+			} else {
+				e.activeClasses = append(e.activeClasses, nil)
 			} 
-
 			lastElementEnd = i
 
-		} else if c == scopeOff && !inComment && !inString {
+		} else if c == scopeOff && !inComment && !inString && !inChar {
 			scopeCount--
 			lastElementEnd = i
-		} else if c == str {
+			doc = ""
+
+			e.activeClasses = e.activeClasses[:(len(e.activeClasses) - 1)]
+			if len(e.activeClasses) > 0 {
+				e.activeClass = e.activeClasses[len(e.activeClasses) - 1]
+				active := e.activeClasses[len(e.activeClasses) - 1]
+
+				if active == nil {
+					// find last used class
+					// because inner class could be inside
+					// of method
+					for i := len(e.activeClasses) - 1; i >= 0; i -- {
+						if e.activeClasses[i] != nil {
+							active = e.activeClasses[i]
+							break
+						}
+					}
+
+					e.activeClass = active
+				}
+				//fmt.Println(active.GetName(), scopeCount, len(e.activeClasses), e.activeClasses[0] == nil)
+			} else {
+				e.activeClass = nil
+			}	
+
+		} else if c == str && !inChar && !inComment {
 			inString = !inString
-		} else if c == newLine && inInlineComment && !inString  {
+		} else if c == newLine && inInlineComment && !inString && !inChar  {
 			inComment = false
 			inInlineComment = false
 			lastElementEnd = i
+		} else if c == char && !inString && !inComment {
+			inChar = !inChar
 		}
+
 	}
 }
 
 
-func storeSignature(s string, doc string, path string, imports *Imports) {
+func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) (bool, bool) {
 
 	isClass := false
 	isInterface := false
@@ -243,21 +345,35 @@ func storeSignature(s string, doc string, path string, imports *Imports) {
 
 	for _, f := range fields {
 		fT := strings.TrimSpace(f)
-		if fT == "class" {
+		if fT == "class" || fT == "enum" || fT == "record" {
 			isClass = true
 			break
 		} else if fT == "interface" {
 			isInterface = true
 			break
-		}
+		} 
+	}
+
+	var pathIn string
+
+	p := strings.Split(path, "/java/")
+
+	if len(p) < 2 {
+		pathIn = path
+	} else {
+		pathIn = p[1] 
 	}
 
 	if isClass {
-		classes = append(classes, NewClass(s, doc, strings.Split(path, "java/")[1], imports))
+		e.classes = append(e.classes, NewClass(path, s, doc, pathIn, imports, e.activeClass))
 	} else if isInterface {
-		interfaces = append(interfaces, NewInterface(s, doc, strings.Split(path,"java/")[1], imports))
+		e.interfaces = append(e.interfaces, NewInterface(s, doc, pathIn, imports))
+	} else
+	{
+		e.activeClass.AppendMethod(NewMethod(s, doc))
 	}
 
+	return isClass, isInterface
 }
 
 func isValidSignature(s string) bool {
@@ -300,11 +416,20 @@ func findFirstSignature(i int, content []byte) []byte {
 
 	end := i
 
-	//fmt.Println("first", string(content[i]))
-
 	for true {
 		if i == 0 || ( content[i] == slash || content[i] == semiColumn) {
-			return content[i:end]
+
+			sig := strings.Split(strings.TrimSpace(string(content[i:end])), "\n")
+
+			startI := 0
+			if len(sig) > 0 {
+				for i := 0; i< len(sig); i++ {
+					if len(sig[i]) == 0 || sig[i][0] == at {
+						startI = i + 1
+					}
+				}
+			}
+			return []byte(strings.Join(sig[startI:], "\n"))
 		} else if i >= 1 {
 			i--
 		}
@@ -319,13 +444,7 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 	end := i
 
 	bracketScopeCount := 0 
-
-	//fmt.Println("content")
-	//o := string(content[lastElementEnd:i])
-
 	for true {
-
-		//	fmt.Println(o)
 
 		if i == lastElementEnd ||( bracketScopeCount == 0 && (content[i] == scopeOff || content[i] == slash || i == lastElementEnd || content[i] == semiColumn || content[i] == scopeOn)) {
 
@@ -339,9 +458,6 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 
 
 			splt := strings.Split(s, "\n")
-			//fmt.Println(splt)
-			//if len(splt) <= 1 {return ""}
-
 			startIndex := 0
 
 			for i, c := range splt {
@@ -398,12 +514,10 @@ func NewImports(c []byte) Imports {
 
 	packages := make([]string, 0)
 
-
 	lines := strings.Split(content, "\n")
 
 	for _,line := range lines {
-		splt := strings.Split(line, " ")
-
+		splt := strings.Split(strings.TrimSpace(line), " ")
 		if len(splt) > 0 && splt[0] == "import" {
 			imports = append(imports, strings.Split(splt[len(splt) -1], ";")[0])
 		}
@@ -424,16 +538,60 @@ func NewImports(c []byte) Imports {
 
 func (i*Imports) GetPath(name string) string {
 
-	for _,i := range i.imports {
-		splt := strings.Split(i, ".")
+	spltName := strings.Split(name, ".")
 
-		if splt[len(splt) - 1] == name {
-			return i
+	outPath := make([]string, 0, 100)
+
+
+	for _,imp := range i.imports {
+		spltImport := strings.Split(imp, ".")
+
+		nameIndex := 0
+
+		for ni, nameChunk := range spltName {
+			matchCount := 0
+
+			matching := false
+
+			for importChunkIndex, importChunk := range spltImport {
+
+				if !matching && importChunk == nameChunk {
+					matching = true
+					for a := 0; a < importChunkIndex; a++ {
+						outPath = append(outPath, spltImport[a])
+						//fmt.Println(spltImport[a])
+					}
+
+					outPath = append(outPath, importChunk)
+					matchCount++
+				} else if ni + matchCount >= len(spltName) || ( matching && importChunk !=  spltName[ni + matchCount] ){
+					matching = false
+					outPath = make([]string, 0, 100)
+					break
+				} else if matching {
+					outPath = append(outPath, importChunk)
+					nameIndex = ni
+					matchCount++
+				}
+			}
+			if matching {
+				for i := nameIndex + matchCount; i < len(spltName); i++  {
+					outPath = append(outPath, spltName[i])
+				}
+
+				return strings.Join(outPath, ".")
+			} else {
+				outPath = make([]string, 0, 100)
+				break
+			}
 		}
+
+
 	}
 
-	return i.packages[0] + "." + name
+	return name 
 }
+
 
 func (i*Imports) Print() {
 	//fmt.Println(i.imports)
