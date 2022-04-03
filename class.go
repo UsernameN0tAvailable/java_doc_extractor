@@ -3,21 +3,19 @@ package main
 import (
 	"strings"
 )
-
-
 type Class struct {
 	path string
 	doc string
 	visibility string
 	name string
 	super string
-	interfaces []string
 	methods []Method
+	interfaces []string
 }
 
 func NewClass(signature string, doc string, path string, imports *Imports) Class {
 
-	fields := strings.Fields(signature)
+	fields := strings.Fields(RemoveTemplate(signature))
 
 	classIndex := -1 
 	extendIndex := -1 
@@ -42,18 +40,15 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 
 	className :=strings.Join(strings.Split(strings.Split(path, ".java")[0], "/"), ".")
 
-	//fmt.Println(path)
-
 	var super string
 
 	if extendIndex < 1 {
 		super = ""
 	} else {
 
-		toFind :=removeTemplate(fields[extendIndex + 1])
+		toFind :=RemoveTemplate(fields[extendIndex + 1])
 		super = imports.GetPath(toFind)
 	}
-
 
 	implements := make([]string, 0)
 
@@ -62,7 +57,7 @@ func NewClass(signature string, doc string, path string, imports *Imports) Class
 		interfacesStr := strings.Split(tmp, "{")[0]
 
 		for _,in := range strings.Split(interfacesStr, ",") {
-			toFind := removeTemplate(strings.TrimSpace(in))
+			toFind := RemoveTemplate(strings.TrimSpace(in))
 			implements = append(implements, imports.GetPath(toFind))
 		}
 	}
@@ -109,13 +104,137 @@ func (c* Class) GetInterfaces() []string {
 	return c.interfaces
 }
 
-func removeTemplate(name string) string {
 
-	tmp := strings.Split(name, "<")
 
-	if len(tmp) > 1 {
-		return tmp[0]
-	} else {
-		return name
-	}
+type Interface struct {
+	path string
+	doc string
+	visibility string
+	name string
+	super string
+	methods []Method
 }
+
+func NewInterface(signature string, doc string, path string, imports *Imports) Interface {
+
+	fields := strings.Fields(RemoveTemplate(signature))
+
+	classIndex := -1 
+	extendIndex := -1 
+	implementsIndex := -1
+	for i, p := range fields {
+		if p == "class" {
+			classIndex = i
+		} else if p == "extends" {
+			extendIndex = i
+		} else if p == "implements" {
+			implementsIndex = i
+		}
+	}
+
+	var vis string 
+
+	if classIndex < 1 {
+		vis = ""
+	} else {
+		vis = strings.Join(fields[:classIndex], " ")
+	}
+
+	className :=strings.Join(strings.Split(strings.Split(path, ".java")[0], "/"), ".")
+
+	var super string
+
+	if extendIndex < 1 {
+		super = ""
+	} else {
+
+		toFind :=RemoveTemplate(fields[extendIndex + 1])
+		super = imports.GetPath(toFind)
+	}
+
+
+	implements := make([]string, 0)
+
+	if implementsIndex > 0 {
+		tmp := strings.Join(fields[implementsIndex + 1:], " ")
+		interfacesStr := strings.Split(tmp, "{")[0]
+
+		for _,in := range strings.Split(interfacesStr, ",") {
+			toFind := RemoveTemplate(strings.TrimSpace(in))
+			implements = append(implements, imports.GetPath(toFind))
+		}
+	}
+
+	return Interface{ 
+		path: path,
+		doc: doc, 
+		visibility: vis,
+		name: className,
+		super: super,
+		methods: make([]Method, 0),
+	} 
+}
+
+func (c * Interface) GetPath() string {
+	return c.path
+}
+
+func (c* Interface) GetDocLinesCount() int {
+	if len(c.doc) == 0 {
+		return 0
+	} 
+	return len(strings.Split(c.doc, "\n"))
+}
+
+func (c* Interface) GetDoc() string {
+	return c.doc
+}
+
+func (c* Interface) GetVis() string {
+	return c.visibility
+}
+
+func (c* Interface) GetName() string {
+	return c.name
+}
+
+func (c* Interface) GetSuper() string {
+	return c.super
+}
+
+
+//public to tst helper
+func RemoveTemplate(name string) string {
+
+	start := 0
+	end := len(name) 
+
+	count := 0
+
+	result := ""
+
+	for i, s := range name {
+
+		if string(s) == "<" {
+
+			count++
+			if count == 1 {
+				end = i 
+			}
+		} else if string(s) == ">" {
+			count--
+
+			if count == 0 {
+				result += name[start:end]
+				start = i + 1
+				end = len(name) 
+			}
+		} 
+	}
+
+	result += name[start:end]
+
+	return result
+}
+
+
