@@ -28,7 +28,7 @@ var tot int = 0
 type Extractor struct {
 	classes []Class
 	interfaces []Interface
-	activeClasses []*Class
+	activeClasses []Scope
 	activeClass Scope 
 }
 
@@ -40,13 +40,13 @@ func (e*Extractor) GetInterfaces() []Interface {
 	return e.interfaces
 }
 
-func (e *Extractor) Extract(rootArg string) {
+func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
 
 	root, err := filepath.Abs(rootArg)
 
 	if err != nil {
 		fmt.Println(err)
-		return
+	        panic("no file")	
 	}
 
 	e.listDirs(root)
@@ -146,7 +146,9 @@ func (e *Extractor) Extract(rootArg string) {
 		}
 	}
 
-	fmt.Println("not found", len(notFound))
+	//fmt.Println("not found", len(notFound))
+
+	return e.classes, e.interfaces
 }
 
 
@@ -160,7 +162,7 @@ func main() {
 		return
 	}
 
-	extractor := Extractor{classes: make([]Class, 0, 20000), interfaces: make([]Interface, 0, 10000), activeClasses: make([]*Class, 0, 200), activeClass: nil}
+	extractor := Extractor{classes: make([]Class, 0, 20000), interfaces: make([]Interface, 0, 10000), activeClasses: make([]Scope, 0, 200), activeClass: nil}
 
 	extractor.Extract(os.Args[1])
 }
@@ -262,16 +264,21 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			scopeCount++
 			isClass := false
+			isInterface := false
 			if isValidSignature(signature) {	
-				isClass = e.storeSignature(signature, doc, path, &imports) 	
+				isClass, isInterface = e.storeSignature(signature, doc, path, &imports) 	
 			} 
 
 			if isClass {
 				active := &e.classes[len(e.classes) - 1]
 				e.activeClasses = append(e.activeClasses, active)
 				e.activeClass = active
-			} else {
+			} else if isInterface {
+				active := &e.interfaces[len(e.interfaces) - 1]
+				e.activeClasses = append(e.activeClasses, active)
+				e.activeClass = active
 				//active = nil
+			} else {
 				e.activeClasses = append(e.activeClasses, nil)
 			}
 
@@ -311,7 +318,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 }
 
 
-func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) bool {
+func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) (bool, bool) {
 
 	isClass := false
 	isInterface := false
@@ -347,7 +354,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 		e.activeClass.AppendMethod(NewMethod(s, doc))
 	}
 
-	return isClass
+	return isClass, isInterface
 }
 
 func isValidSignature(s string) bool {

@@ -1,8 +1,10 @@
 package main
 
 import (
-//	"fmt"
-//	"os"
+	//	"fmt"
+	//	"os"
+	//	"fmt"
+	"fmt"
 	"strings"
 )
 
@@ -10,6 +12,7 @@ type Scope interface {
 	IsClass() bool
 	IsInterface() bool
 	AppendMethod(m Method)
+	GetName() string
 }
 
 
@@ -60,12 +63,20 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 
 	pathSplt := strings.Split(strings.Split(path, ".java")[0], "/")
 
+	className := strings.Join(pathSplt, ".")
 	if scope != nil && scope.IsClass() {
-		pathSplt[len(pathSplt) - 1] = name
+		pathSplt[len(pathSplt) - 1] = name 
+		className = strings.Join(pathSplt, ".")
+	} else if scope != nil && scope.IsInterface() && staticIndex > -1{
+		pathSplt = append(pathSplt, name)
+		className = scope.GetName() + "." + name
+		fmt.Println(className)
+		//fmt.Println(scope.GetName(), name)
 	}
 
 
-	className := strings.Join(pathSplt, ".")
+
+	fmt.Println("add", className)
 
 	var super string
 
@@ -161,8 +172,8 @@ type Interface struct {
 	methods []Method
 }
 
-func IsClass(c *Interface) bool { return false}
-func IsInterface(c *Interface) bool {return true}
+func (c *Interface)IsClass() bool { return false}
+func (c *Interface)IsInterface() bool {return true}
 
 func NewInterface(signature string, doc string, path string, imports *Imports) Interface {
 
