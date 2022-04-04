@@ -29,21 +29,16 @@ const (
 var tot int = 0
 
 type Extractor struct {
-	classes []Class
-	interfaces []Interface
-	activeClasses []Scope
-	activeClass Scope 
+	classes []Scope
+	activeScopes []*Scope
+	activeScope *Scope 
 }
 
-func (e*Extractor) GetClasses() []Class {
+func (e*Extractor) GetScopees() []Scope {
 	return e.classes
 }
 
-func (e*Extractor) GetInterfaces() []Interface {
-	return e.interfaces
-}
-
-func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
+func (e *Extractor) Extract(rootArg string) []Scope {
 
 	root, err := filepath.Abs(rootArg)
 
@@ -56,8 +51,11 @@ func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
 
 	e.SecondaryPackageMatches()
 
+//	e.evaluate()
 
-	return e.classes, e.interfaces
+//	os.Exit(3)
+
+	return e.classes
 }
 
 
@@ -72,10 +70,10 @@ func (e *Extractor) SecondaryPackageMatches() {
 			pack, err := class.GetPackage()
 
 			if err == nil {
-				for si,superClass := range e.classes {
-					if bi != si && superClass.IsInPackage(pack) {
+				for si,superScope := range e.classes {
+					if bi != si && superScope.IsInPackage(pack) {
 						newName := pack + "." + super
-						if superClass.GetName() == newName {	
+						if superScope.GetName() == newName {	
 							e.classes[bi].SetSuper(newName)	
 						}
 
@@ -98,19 +96,31 @@ func main() {
 		return
 	}
 
-	extractor := Extractor{classes: make([]Class, 0, 20000), interfaces: make([]Interface, 0, 10000), activeClasses: make([]Scope, 0, 200), activeClass: nil}
+	extractor := Extractor{classes: make([]Scope, 0, 20000), activeScopes: make([]*Scope, 0, 200), activeScope: nil}
 
-	classes, _ :=extractor.Extract(os.Args[1])
+	classes := extractor.Extract(os.Args[1])
 
+	jsonOut, err := json.MarshalIndent(classes, "", "\t")
+
+	if err == nil {
+		fmt.Println(string(jsonOut))
+	} else {
+		fmt.Println("error", err)
+	}
+
+}
+
+
+func (e*Extractor) evaluate() {
 
 	notFoundCount := 0
 	foundCount := 0
 	withSuper := 0 
 
-	fmt.Println("tot",len(classes))
+	fmt.Println("tot",len(e.classes))
 
 
-	for _,class := range classes {
+	for _,class := range e.classes {
 
 		super := class.GetSuper()
 
@@ -122,9 +132,9 @@ func main() {
 
 			if true {
 
-				for _,superClass := range classes {
+				for _,superScope := range e.classes {
 
-					if superClass.GetName() == super {
+					if superScope.GetName() == super {
 						found = true
 						break
 					}
@@ -142,16 +152,6 @@ func main() {
 	}
 
 	fmt.Println("not found:", notFoundCount,"found:", foundCount,"with super:", withSuper)
-
-	os.Exit(3)
-
-	jsonOut, err := json.MarshalIndent(classes, "", "\t")
-
-	if err == nil {
-		fmt.Println(string(jsonOut))
-	} else {
-		fmt.Println("error", err)
-	}
 
 }
 
@@ -258,7 +258,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 		} else if c == scopeOn && !inComment && !inString && !inChar {
 
-			//fmt.Println("scope on")
+
 
 			var signature string
 			if scopeCount == 0 {
@@ -280,23 +280,17 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			signature = strings.Join(sigArr, "\n")
 
 			scopeCount++
-			isClass := false
-			isInterface := false
+			isContainerScope := false
 			if isValidSignature(signature) {	
-				isClass, isInterface = e.storeSignature(signature, doc, path, &imports) 	
+				isContainerScope = e.storeSignature(signature, doc, path, &imports) 	
 			}
 
-			if isClass {
+			if isContainerScope {
 				active := &e.classes[len(e.classes) - 1]
-				e.activeClasses = append(e.activeClasses, active)
-				e.activeClass = active
-			} else if isInterface {
-				active := &e.interfaces[len(e.interfaces) - 1]
-				e.activeClasses = append(e.activeClasses, active)
-				e.activeClass = active
-				//active = nil
-			} else {
-				e.activeClasses = append(e.activeClasses, nil)
+				e.activeScopes = append(e.activeScopes, active)
+				e.activeScope = active
+			}  else {
+				e.activeScopes = append(e.activeScopes, nil)
 			} 
 			lastElementEnd = i
 
@@ -305,27 +299,27 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			lastElementEnd = i
 			doc = ""
 
-			e.activeClasses = e.activeClasses[:(len(e.activeClasses) - 1)]
-			if len(e.activeClasses) > 0 {
-				e.activeClass = e.activeClasses[len(e.activeClasses) - 1]
-				active := e.activeClasses[len(e.activeClasses) - 1]
+			e.activeScopes = e.activeScopes[:(len(e.activeScopes) - 1)]
+			if len(e.activeScopes) > 0 {
+				e.activeScope = e.activeScopes[len(e.activeScopes) - 1]
+				active := e.activeScopes[len(e.activeScopes) - 1]
 
 				if active == nil {
 					// find last used class
 					// because inner class could be inside
 					// of method
-					for i := len(e.activeClasses) - 1; i >= 0; i -- {
-						if e.activeClasses[i] != nil {
-							active = e.activeClasses[i]
+					for i := len(e.activeScopes) - 1; i >= 0; i -- {
+						if e.activeScopes[i] != nil {
+							active = e.activeScopes[i]
 							break
 						}
 					}
 
-					e.activeClass = active
+					e.activeScope = active
 				}
-				//fmt.Println(active.GetName(), scopeCount, len(e.activeClasses), e.activeClasses[0] == nil)
+				//fmt.Println(active.GetName(), scopeCount, len(e.activeScopes), e.activeScopes[0] == nil)
 			} else {
-				e.activeClass = nil
+				e.activeScope = nil
 			}	
 
 		} else if c == str && !inChar && !inComment {
@@ -342,27 +336,22 @@ func (e* Extractor) parseFile(content []byte, path string) {
 }
 
 
-func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) (bool, bool) {
+func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) bool {
 
-	isClass := false
-	isInterface := false
+	isContainerScope := false
 	fields := strings.Fields(s)
 
 	for _, f := range fields {
 		fT := strings.TrimSpace(f)
-		if fT == "class" || fT == "enum" || fT == "record" {
-			isClass = true
-			break
-		} else if fT == "interface" {
-			isInterface = true
-			break
-		} 
+		if fT == "class" || fT == "enum" || fT == "record" || fT == "interface" {
+			isContainerScope = true
+			break 
+		}
 	}
 
 	var pathIn string
 
 	p := strings.Split(path, "/org/")
-
 
 	if len(p) < 2 {
 		pathIn = path
@@ -370,16 +359,13 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 		pathIn = "org/" + p[len(p) - 1] 
 	}
 
-	if isClass {
-		e.classes = append(e.classes, NewClass(path, s, doc, pathIn, imports, e.activeClass))
-	} else if isInterface {
-		e.interfaces = append(e.interfaces, NewInterface(s, doc, pathIn, imports))
-	} else
-	{
-		e.activeClass.AppendMethod(NewMethod(s, doc))
+	if isContainerScope {
+		e.classes = append(e.classes, NewScope(path, s, doc, pathIn, imports, e.activeScope))	
+	} else	{
+		e.activeScope.AppendMethod(NewMethod(s, doc))
 	}
 
-	return isClass, isInterface
+	return isContainerScope 
 }
 
 func isValidSignature(s string) bool {
@@ -611,20 +597,6 @@ func (i*Imports) GetPath(name string) string {
 
 
 	}
-
-	//return i.packages[0] + "." + name 
 	return name
 }
-
-
-func (i*Imports) Print() {
-	//fmt.Println(i.imports)
-}
-
-
-
-
-
-
-
 
