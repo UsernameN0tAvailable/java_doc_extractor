@@ -1,12 +1,6 @@
 package main
 
 import (
-	//	"fmt"
-	//	"os"
-	//	"fmt"
-	//	"fmt"
-	//"fmt"
-	//"encoding/json"
 	"strings"
 )
 
@@ -28,6 +22,7 @@ type Class struct {
 	Interfaces []string `json:"interfaces"`
 	staticIndex int
 	fullPath string
+	imports Imports
 }
 
 func (c*Class) IsClass() bool {return true}
@@ -115,7 +110,21 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 		Super: super,
 		Interfaces: implements,
 		Methods: make([]Method, 0, 20),
+		imports: *imports,
 	} 
+}
+
+func (c*Class) IsInPackage(packSearched string) bool {
+	pack, err := c.imports.GetPackage()
+	if err != nil {
+		return false
+	}
+
+	return pack == packSearched
+}
+
+func (c*Class) GetPackage() (string, error) {
+	return c.imports.GetPackage()
 }
 
 func (c*Class) GetMethods() []Method {
@@ -151,6 +160,10 @@ func (c* Class) GetVis() string {
 
 func (c* Class) GetName() string {
 	return c.Name
+}
+
+func (c* Class) SetSuper(v string) {
+	c.Super = v
 }
 
 func (c* Class) GetSuper() string {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"encoding/json"
+	"errors"
 )
 
 
@@ -53,10 +54,38 @@ func (e *Extractor) Extract(rootArg string) ([]Class, []Interface) {
 
 	e.listDirs(root)
 
+	e.SecondaryPackageMatches()
+
+
 	return e.classes, e.interfaces
 }
 
 
+func (e *Extractor) SecondaryPackageMatches() {
+
+	for bi,class := range e.classes {
+
+		super := class.GetSuper()
+
+		if len(super) > 0 && len(strings.Split(super, ".")) == 1 {
+
+			pack, err := class.GetPackage()
+
+			if err == nil {
+				for si,superClass := range e.classes {
+					if bi != si && superClass.IsInPackage(pack) {
+						newName := pack + "." + super
+						if superClass.GetName() == newName {	
+							e.classes[bi].SetSuper(newName)	
+						}
+
+					} 
+
+				} 
+			}
+		}
+	}
+}
 
 
 
@@ -73,6 +102,49 @@ func main() {
 
 	classes, _ :=extractor.Extract(os.Args[1])
 
+
+	notFoundCount := 0
+	foundCount := 0
+	withSuper := 0 
+
+	fmt.Println("tot",len(classes))
+
+
+	for _,class := range classes {
+
+		super := class.GetSuper()
+
+		found := false
+
+		if len(super) > 0 {
+
+			withSuper++
+
+			if true {
+
+				for _,superClass := range classes {
+
+					if superClass.GetName() == super {
+						found = true
+						break
+					}
+				}
+
+				if found {
+					foundCount++
+				} else {
+					notFoundCount++
+				}
+			} else {
+				//				fmt.Println(super)
+			}
+		}
+	}
+
+	fmt.Println("not found:", notFoundCount,"found:", foundCount,"with super:", withSuper)
+
+	os.Exit(3)
+
 	jsonOut, err := json.MarshalIndent(classes, "", "\t")
 
 	if err == nil {
@@ -82,6 +154,27 @@ func main() {
 	}
 
 }
+
+func inProject(path string,projectName string) bool {
+
+	split := strings.Split(path, ".")
+
+
+	isMatch := false
+
+	for _,s := range split {
+		if s == projectName {
+			isMatch = true
+			break
+		}
+	}
+
+
+	return isMatch
+}
+
+
+
 
 
 func (e *Extractor) listDirs(root string) {
@@ -458,6 +551,14 @@ func NewImports(c []byte) Imports {
 	return Imports{imports: imports, packages: packages} 
 }
 
+func (i*Imports) GetPackage() (string, error) {
+	if len(i.packages) > 0 {
+		return i.packages[0], nil
+	} else {
+		return "", errors.New("No Package")
+	}
+}
+
 
 func (i*Imports) GetPath(name string) string {
 
@@ -511,7 +612,8 @@ func (i*Imports) GetPath(name string) string {
 
 	}
 
-	return name 
+	//return i.packages[0] + "." + name 
+	return name
 }
 
 
