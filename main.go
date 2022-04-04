@@ -51,9 +51,8 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 
 	e.SecondaryPackageMatches()
 
-//	e.evaluate()
-
-//	os.Exit(3)
+	e.evaluate()
+	os.Exit(3)
 
 	return e.classes
 }
@@ -61,6 +60,7 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 
 func (e *Extractor) SecondaryPackageMatches() {
 
+	// match classes
 	for bi,class := range e.classes {
 
 		super := class.GetSuper()
@@ -71,7 +71,7 @@ func (e *Extractor) SecondaryPackageMatches() {
 
 			if err == nil {
 				for si,superScope := range e.classes {
-					if bi != si && superScope.IsInPackage(pack) {
+					if bi != si && superScope.IsClass() && superScope.IsInPackage(pack) {
 						newName := pack + "." + super
 						if superScope.GetName() == newName {	
 							e.classes[bi].SetSuper(newName)	
@@ -80,6 +80,33 @@ func (e *Extractor) SecondaryPackageMatches() {
 					} 
 
 				} 
+			}
+		}
+	}
+
+	// match interfaces 
+	for bi,class := range e.classes {
+
+		interfaces := class.GetInterfaces()
+
+		for ii, inter := range interfaces {
+
+			if len(inter) > 0 && len(strings.Split(inter, ".")) == 1 {
+				pack, err := class.GetPackage()
+
+				if err == nil {
+					for _, superScope := range e.classes {
+						if superScope.IsInterface() && superScope.IsInPackage(pack) {
+							newName := pack + "." + inter 
+							if superScope.IsClass() && superScope.GetName() == newName {	
+								fmt.Println("this")
+								e.classes[bi].SetInterface(newName, ii)	
+							}
+
+						} 
+
+					} 
+				}
 			}
 		}
 	}

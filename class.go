@@ -19,6 +19,10 @@ type Scope struct {
 	ScopeType string `json:"type"`
 }
 
+func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
+
+func (s*Scope) IsInterface() bool {return s.ScopeType == "interface"}
+
 func NewScope(fullPath string, signature string, doc string, path string, imports *Imports, scope *Scope) Scope {
 
 	fields := strings.Fields(strings.TrimSpace(RemoveTemplate(signature)))
@@ -166,6 +170,10 @@ func (c* Scope) GetSuper() string {
 
 func (c* Scope) GetInterfaces() []string {
 	return c.Interfaces
+}
+
+func (c* Scope) SetInterface(v string, index int) {
+	c.Interfaces[index] = v
 }
 
 
