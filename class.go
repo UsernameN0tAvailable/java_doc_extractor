@@ -4,15 +4,8 @@ import (
 	"strings"
 )
 
-type Scope interface {
-	IsClass() bool
-	IsInterface() bool
-	AppendMethod(m Method)
-	GetName() string
-}
 
-
-type Class struct {
+type Scope struct {
 	path string 
 	Doc string  `json:"documentation"`
 	visibility string
@@ -23,12 +16,10 @@ type Class struct {
 	staticIndex int
 	fullPath string
 	imports Imports
+	ScopeType string `json:"type"`
 }
 
-func (c*Class) IsClass() bool {return true}
-func (c*Class) IsInterface() bool {return false}
-
-func NewClass(fullPath string, signature string, doc string, path string, imports *Imports, scope Scope) Class {
+func NewScope(fullPath string, signature string, doc string, path string, imports *Imports, scope *Scope) Scope {
 
 	fields := strings.Fields(strings.TrimSpace(RemoveTemplate(signature)))
 
@@ -36,9 +27,20 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 	extendIndex := -1 
 	implementsIndex := -1
 	staticIndex := -1
+	scopeType := "" 
 	for i, p := range fields {
 		if p == "class" {
 			classIndex = i
+			scopeType = "class"
+		} else if p == "interface" {
+			classIndex = i
+			scopeType = "interface"
+		} else if p == "enum" {
+			classIndex = i
+			scopeType = "enum"
+		} else if p == "record" {
+			classIndex = i
+			scopeType = "record"
 		} else if p == "extends" {
 			extendIndex = i
 		} else if p == "implements" {
@@ -62,21 +64,12 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 
 
 	className := strings.Join(pathSplt, ".")
-	if scope != nil && scope.IsClass() {
-		//fmt.Println("class", name, scope.GetName())	
-		if staticIndex == -1 {
-			pathSplt[len(pathSplt) - 1] = name 
-			className = strings.Join(pathSplt, ".")
-		}  else {
-			className = scope.GetName() + "." + name
-		}
-		//fmt.Println(className)
-	} else if scope != nil && scope.IsInterface() {
-		//fmt.Println("interface", name, scope.GetName())
-		pathSplt = append(pathSplt, name)
+
+	if staticIndex == -1 {
+		pathSplt[len(pathSplt) - 1] = name 
+		className = strings.Join(pathSplt, ".")
+	}  else {
 		className = scope.GetName() + "." + name
-		//fmt.Println(className)
-		//fmt.Println(scope.GetName(), name)
 	}
 
 	var super string
@@ -100,7 +93,8 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 		}	
 	}
 
-	return Class{
+	return Scope{
+		ScopeType: scopeType,
 		fullPath: fullPath,
 		staticIndex: staticIndex,
 		path: path,
@@ -114,7 +108,7 @@ func NewClass(fullPath string, signature string, doc string, path string, import
 	} 
 }
 
-func (c*Class) IsInPackage(packSearched string) bool {
+func (c*Scope) IsInPackage(packSearched string) bool {
 	pack, err := c.imports.GetPackage()
 	if err != nil {
 		return false
@@ -123,162 +117,56 @@ func (c*Class) IsInPackage(packSearched string) bool {
 	return pack == packSearched
 }
 
-func (c*Class) GetPackage() (string, error) {
+func (c*Scope) GetPackage() (string, error) {
 	return c.imports.GetPackage()
 }
 
-func (c*Class) GetMethods() []Method {
+func (c*Scope) GetMethods() []Method {
 	return c.Methods
 }
 
-func (c * Class) AppendMethod(m Method) {
+func (c * Scope) AppendMethod(m Method) {
 	c.Methods = append(c.Methods, m)
 }
 
-func (c * Class) GetPath() string {
+func (c * Scope) GetPath() string {
 	return c.path
 }
 
-func (c * Class) GetFullPath() string {
+func (c * Scope) GetFullPath() string {
 	return c.fullPath
 }
 
-func (c* Class) GetDocLinesCount() int {
+func (c* Scope) GetDocLinesCount() int {
 	if len(c.Doc) == 0 {
 		return 0
 	} 
 	return len(strings.Split(c.Doc, "\n"))
 }
 
-func (c* Class) GetDoc() string {
+func (c* Scope) GetDoc() string {
 	return c.Doc
 }
 
-func (c* Class) GetVis() string {
+func (c* Scope) GetVis() string {
 	return c.visibility
 }
 
-func (c* Class) GetName() string {
+func (c* Scope) GetName() string {
 	return c.Name
 }
 
-func (c* Class) SetSuper(v string) {
+func (c* Scope) SetSuper(v string) {
 	c.Super = v
 }
 
-func (c* Class) GetSuper() string {
+func (c* Scope) GetSuper() string {
 	return c.Super
 }
 
-func (c* Class) GetInterfaces() []string {
+func (c* Scope) GetInterfaces() []string {
 	return c.Interfaces
 }
-
-
-
-type Interface struct {
-	path string
-	doc string
-	visibility string
-	name string
-	super string
-	methods []Method
-}
-
-func (c *Interface)IsClass() bool { return false}
-func (c *Interface)IsInterface() bool {return true}
-
-func NewInterface(signature string, doc string, path string, imports *Imports) Interface {
-
-	fields := strings.Fields(RemoveTemplate(signature))
-
-	classIndex := -1 
-	extendIndex := -1 
-	implementsIndex := -1
-	for i, p := range fields {
-		if p == "class" {
-			classIndex = i
-		} else if p == "extends" {
-			extendIndex = i
-		} else if p == "implements" {
-			implementsIndex = i
-		}
-	}
-
-	var vis string 
-
-	if classIndex < 1 {
-		vis = ""
-	} else {
-		vis = strings.Join(fields[:classIndex], " ")
-	}
-
-	className :=strings.Join(strings.Split(strings.Split(path, ".java")[0], "/"), ".")
-
-	var super string
-
-	if extendIndex < 1 {
-		super = ""
-	} else {
-
-		toFind :=RemoveTemplate(fields[extendIndex + 1])
-		super = imports.GetPath(toFind)
-	}
-
-
-	implements := make([]string, 0)
-
-	if implementsIndex > 0 {
-		tmp := strings.Join(fields[implementsIndex + 1:], " ")
-		interfacesStr := strings.Split(tmp, "{")[0]
-
-		for _,in := range strings.Split(interfacesStr, ",") {
-			toFind := RemoveTemplate(strings.TrimSpace(in))
-			implements = append(implements, imports.GetPath(toFind))
-		}
-	}
-
-	return Interface{ 
-		path: path,
-		doc: doc, 
-		visibility: vis,
-		name: className,
-		super: super,
-		methods: make([]Method, 0),
-	} 
-}
-
-func (c * Interface) GetPath() string {
-	return c.path
-}
-
-func (c* Interface) GetDocLinesCount() int {
-	if len(c.doc) == 0 {
-		return 0
-	} 
-	return len(strings.Split(c.doc, "\n"))
-}
-
-func (c* Interface) GetDoc() string {
-	return c.doc
-}
-
-func (c* Interface) GetVis() string {
-	return c.visibility
-}
-
-func (c* Interface) GetName() string {
-	return c.name
-}
-
-func (c* Interface) GetSuper() string {
-	return c.super
-}
-
-func (c * Interface) AppendMethod(m Method) {
-	c.methods = append(c.methods, m)
-}
-
 
 
 //public to tst helper
