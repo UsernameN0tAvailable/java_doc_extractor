@@ -23,6 +23,9 @@ func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
 
 func (s*Scope) IsInterface() bool {return s.ScopeType == "interface"}
 
+func (s*Scope) IsEnum() bool {return s.ScopeType == "enum"}
+func (s*Scope) IsRecord() bool {return s.ScopeType == "record"}
+
 func NewScope(fullPath string, signature string, doc string, path string, imports *Imports, scope *Scope) Scope {
 
 	fields := strings.Fields(strings.TrimSpace(RemoveTemplate(signature)))

@@ -15,6 +15,7 @@ const (
 	scopeOn = byte('{')
 	scopeOff = byte('}')
 	slash = byte('/')
+	backSlash = byte('\\')
 	star = byte('*')
 	str = byte('"')
 	char = byte('\'')
@@ -51,8 +52,9 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 
 	e.SecondaryPackageMatches()
 
-	e.evaluate()
-	os.Exit(3)
+	//e.evaluate()
+
+	//os.Exit(3)
 
 	return e.classes
 }
@@ -99,7 +101,6 @@ func (e *Extractor) SecondaryPackageMatches() {
 						if superScope.IsInterface() && superScope.IsInPackage(pack) {
 							newName := pack + "." + inter 
 							if superScope.IsClass() && superScope.GetName() == newName {	
-								fmt.Println("this")
 								e.classes[bi].SetInterface(newName, ii)	
 							}
 
@@ -144,8 +145,14 @@ func (e*Extractor) evaluate() {
 	foundCount := 0
 	withSuper := 0 
 
-	fmt.Println("tot",len(e.classes))
+	notFoundInterfaces := 0
+	foundInterfaces := 0
+	importedInterfaces := 0
 
+	classImports := make([]string, 0, 10000)
+	interfaceImports := make([]string, 0, 10000)
+
+	fmt.Println("Tot Scopes",len(e.classes))
 
 	for _,class := range e.classes {
 
@@ -157,29 +164,82 @@ func (e*Extractor) evaluate() {
 
 			withSuper++
 
-			if true {
 
-				for _,superScope := range e.classes {
+			for _,superScope := range e.classes {
 
-					if superScope.GetName() == super {
-						found = true
-						break
-					}
+				if superScope.GetName() == super && superScope.IsClass() {
+					found = true
+					break
 				}
-
-				if found {
-					foundCount++
-				} else {
-					notFoundCount++
-				}
-			} else {
-				//				fmt.Println(super)
 			}
+
+			if found {
+				foundCount++
+			} else {
+				notFoundCount++
+				classImports = addUnique(classImports, super)
+			}
+
+		}
+
+
+		interfaces := class.GetInterfaces()
+
+
+		for _,inter := range interfaces {
+
+			found := false
+
+			for _,superScope := range e.classes {
+
+				if superScope.GetName() == inter && superScope.IsInterface() {
+					found = true
+					break
+				}
+
+
+			}
+
+			if found {
+				foundInterfaces++
+			} else {
+				interfaceImports = addUnique(interfaceImports, inter)
+				notFoundInterfaces++
+			}
+
+			importedInterfaces++
 		}
 	}
 
-	fmt.Println("not found:", notFoundCount,"found:", foundCount,"with super:", withSuper)
+	fmt.Println("Classes: Not Found(imports):", notFoundCount,"Found:", foundCount,"extends:", withSuper)
+	fmt.Println("Interfaces: Not Found(imports):", notFoundInterfaces,"Found:", foundInterfaces,"implements:", importedInterfaces)
 
+	fmt.Println("unique interface imports:", len(interfaceImports))
+	fmt.Println("unique class imports:", len(classImports))
+	/*
+	for _,i := range interfaceImports {
+		//fmt.Println(i)
+	} */
+
+}
+
+
+func addUnique(vals []string, v string) []string {
+
+	found := false
+
+	for _,e := range vals {
+		if e == v {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return append(vals, v)
+	}
+
+	return vals
 }
 
 func inProject(path string,projectName string) bool {
@@ -211,7 +271,6 @@ func (e *Extractor) listDirs(root string) {
 	if err != nil {
 		fmt.Println(err)
 		e.parseJavaFile(root)
-
 		return
 	}
 	for fileIndex := range files {
@@ -219,7 +278,7 @@ func (e *Extractor) listDirs(root string) {
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
 			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
-		} else if file.IsDir() && file.Name() != "build" {
+		} else if file.IsDir()  {
 			e.listDirs(root + string(os.PathSeparator) + file.Name())
 		}
 	}
@@ -234,18 +293,20 @@ func (e* Extractor) parseJavaFile(filePath string) {
 		fmt.Println("Couldnt read file at: " + filePath)
 		return
 	}
-	e.parseFile(content, filePath)
+	clean := removeComment(content)
+
+	e.parseFile(clean, filePath)
 
 }
 
 func (e* Extractor) parseFile(content []byte, path string) {
-
 
 	inComment := false
 	inInlineComment := false
 	inDocumentation := false
 	inString := false
 	inChar := false
+	escape := false
 
 	start := 0
 	lastElementEnd := 0
@@ -256,8 +317,6 @@ func (e* Extractor) parseFile(content []byte, path string) {
 	imports := NewImports(content)
 
 	for i, c := range content {
-
-
 
 		if c == slash && !inString && !inChar {
 			nextIndex := i + 1
@@ -285,15 +344,12 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 		} else if c == scopeOn && !inComment && !inString && !inChar {
 
-
-
 			var signature string
 			if scopeCount == 0 {
 				signature = string(findFirstSignature(i, content, lastElementEnd))	
 			} else {
 				signature = findSignature(i - 1, content, lastElementEnd)
 			}
-
 
 			sigArr := make([]string, 0, 10)
 
@@ -303,14 +359,15 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				}
 			}
 
-
 			signature = strings.Join(sigArr, "\n")
 
 			scopeCount++
 			isContainerScope := false
+
 			if isValidSignature(signature) {	
 				isContainerScope = e.storeSignature(signature, doc, path, &imports) 	
 			}
+
 
 			if isContainerScope {
 				active := &e.classes[len(e.classes) - 1]
@@ -349,17 +406,92 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				e.activeScope = nil
 			}	
 
-		} else if c == str && !inChar && !inComment {
+		} else if c == str && !inChar && !inComment && !escape {
 			inString = !inString
-		} else if c == newLine && inInlineComment && !inString && !inChar  {
+		} else if c == newLine && inInlineComment && !inString {
 			inComment = false
 			inInlineComment = false
 			lastElementEnd = i
-		} else if c == char && !inString && !inComment {
+		} else if c == char && !inString && !inComment && !escape {
 			inChar = !inChar
+		} else if c == backSlash && !escape && (inString || inChar) {
+			escape = true
+		} else if escape && (inString || inChar) {
+			escape = false
+		} 
+
+	}
+}
+
+
+func printLine(content []byte, index int) {
+
+	chunk := content[:index]
+
+	splt := strings.Split(string(chunk),"\n")
+
+	if len(splt) > 0 {
+		fmt.Println(len(splt), splt[len(splt) - 1])
+	}
+}
+
+
+func removeComment(v []byte) []byte {
+
+
+	isMultiline := false
+	isSingleLine := false
+	inString := false
+	inChar := false
+	isEscape := false
+	isJson := false
+
+	l := len(v)
+
+	start := 0
+
+	for i,b := range v  {
+
+		nextIndex := i + 1
+		if b == byte('"') && len(v) > nextIndex + 1 && v[nextIndex] == byte('"') && v[nextIndex + 1] == byte('"') && !isEscape && !inChar && !inString && !isJson {
+			isJson = true
+			start = i
+		} else if b == byte('"') && isJson && len(v) > nextIndex + 1 && v[nextIndex] == byte('"') && v[nextIndex + 1] == byte('"') && !isEscape && !inChar && !inString {
+			firstChunk := string(v[:start])
+			endChunk := string(v[nextIndex+2:])
+			return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+
+		} else if b == slash && !inString && !inChar && !isJson {
+			if !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == star && (!(len(v) > nextIndex + 1 && v[nextIndex+1] == star) || (len(v) > nextIndex + 2 && v[nextIndex+1] == star && v[nextIndex + 2] == star)){
+				isMultiline = true
+				start = i
+			} else if !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == slash {
+				isSingleLine = true
+				start = i
+			}
+		} else if b == star && !inString && !inChar && !isJson {
+			if isMultiline && l > nextIndex && v[nextIndex] == slash {
+				firstChunk := string(v[:start])
+				endChunk := string(v[nextIndex+1:])
+				return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+			}
+		} else if b == newLine && isSingleLine && !inChar && !inString && !isJson {
+			firstChunk := string(v[:start])
+			endChunk := string(v[i:])
+			return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+		} else if b == byte('"') && !isMultiline && !isSingleLine && !inChar && !isEscape && !isJson {
+			inString = !inString
+		} else if b == byte('\'') && !isMultiline && !isSingleLine && !inString && !isEscape && !isJson {
+			inChar = !inChar
+		} else if b == backSlash && (inString || inChar) && !isEscape && !isJson {
+			isEscape = true
+		} else if (inString || inChar) && isEscape {
+			isEscape = false
 		}
 
 	}
+
+	return v
 }
 
 
@@ -388,7 +520,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 
 	if isContainerScope {
 		e.classes = append(e.classes, NewScope(path, s, doc, pathIn, imports, e.activeScope))	
-	} else	{
+	} else if e.activeScope != nil {
 		e.activeScope.AppendMethod(NewMethod(s, doc))
 	}
 
@@ -433,6 +565,10 @@ func isValidSignatureKeyWord(predicate string) bool {
 
 func findFirstSignature(i int, content []byte, lastElementEnd int) []byte {
 
+	if lastElementEnd == 0 {
+		lastElementEnd = -1
+	}
+
 	end := i
 
 	for true {
@@ -458,6 +594,7 @@ func findFirstSignature(i int, content []byte, lastElementEnd int) []byte {
 				} 
 				return []byte(tmp[1:])
 			} else {
+
 				return []byte(tmp)
 			}
 
