@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+//	"fmt"
 )
 
 
@@ -56,6 +57,8 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 			staticIndex = i
 		}
 	}
+
+	//fmt.Println(fields, signature)
 
 	name := fields[classIndex + 1]
 

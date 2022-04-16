@@ -307,6 +307,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 	inString := false
 	inChar := false
 	escape := false
+	paramsScope := 0
 
 	start := 0
 	lastElementEnd := 0
@@ -342,14 +343,18 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				lastElementEnd = i
 			}
 
-		} else if c == scopeOn && !inComment && !inString && !inChar {
+		} else if c == scopeOn && !inComment && !inString && !inChar && paramsScope == 0 {
 
 			var signature string
 			if scopeCount == 0 {
+
 				signature = string(findFirstSignature(i, content, lastElementEnd))	
 			} else {
-				signature = findSignature(i - 1, content, lastElementEnd)
+				signature = findSignature(i, content, lastElementEnd + 1)
+				//fmt.Println(signature)
 			}
+
+			//			fmt.Println(signature)
 
 			sigArr := make([]string, 0, 10)
 
@@ -378,7 +383,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			} 
 			lastElementEnd = i
 
-		} else if c == scopeOff && !inComment && !inString && !inChar {
+		} else if c == scopeOff && !inComment && !inString && !inChar && paramsScope == 0 {
 			scopeCount--
 			lastElementEnd = i
 			doc = ""
@@ -418,7 +423,12 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			escape = true
 		} else if escape && (inString || inChar) {
 			escape = false
-		} 
+		} else if c == roundOpen {
+			paramsScope ++
+		} else if c == roundClose {
+			paramsScope--
+		}
+		 
 
 	}
 }
@@ -500,9 +510,20 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	isContainerScope := false
 	fields := strings.Fields(s)
 
+	//fmt.Println(fields)
+
+	paramsOpen := false
+
 	for _, f := range fields {
 		fT := strings.TrimSpace(f)
-		if fT == "class" || fT == "enum" || fT == "record" || fT == "interface" {
+
+		if !paramsOpen && contains(fT, roundOpen) {
+			paramsOpen = true
+		} else if paramsOpen && contains(fT, roundClose) {
+			paramsOpen = false
+		}
+
+		if !paramsOpen && ( fT == "class" || fT == "enum" || fT == "record" || fT == "interface") {
 			isContainerScope = true
 			break 
 		}
@@ -527,15 +548,24 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	return isContainerScope 
 }
 
+func contains(stack string, hay byte) bool {
+
+	for _,c := range stack {
+		if byte(c) == hay {
+			return true
+		}
+	}
+
+	return false
+}
+
 func isValidSignature(s string) bool {
 
 	trimmed := strings.TrimSpace(s)
 
 	if len(trimmed) == 0 {
 		return false
-	} else if trimmed[0] == at {	
-		return false
-	} else {
+ 	} else {
 		fields := strings.Fields(trimmed)
 		predicate := fields[0]
 		if len(predicate) == 0 {
@@ -609,7 +639,33 @@ func findFirstSignature(i int, content []byte, lastElementEnd int) []byte {
 
 func findSignature(i int, content []byte, lastElementEnd int) string {
 
+	end := i	
+	start := end
+
+	paramsScope := 0
+
+	for t := end; t > lastElementEnd; t-- {
+
+		char := content[t]
+
+		if char == roundClose {
+			paramsScope++
+		} else if char == roundOpen {
+			paramsScope--
+		}
+
+		if char == semiColumn && paramsScope == 0 {
+			break
+		}
+		start = t
+	}
+
+	return strings.TrimSpace(string(content[start: end]))
+
+	/*
 	end := i
+
+	fmt.Println(string(content[i + 1]))
 
 	bracketScopeCount := 0 
 	for true {
@@ -649,7 +705,7 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 		}
 	}
 
-	return "" 
+	return ""  */
 }
 
 
