@@ -29,6 +29,8 @@ const (
 
 var tot int = 0
 
+var basePath string 
+
 type Extractor struct {
 	classes []Scope
 	activeScopes []*Scope
@@ -40,6 +42,10 @@ func (e*Extractor) GetScopees() []Scope {
 }
 
 func (e *Extractor) Extract(rootArg string) []Scope {
+
+	splitRootPath := strings.Split(rootArg, "/")
+	projectName := splitRootPath[len(splitRootPath) - 1]	
+	basePath = strings.Split(rootArg, projectName)[0]
 
 	root, err := filepath.Abs(rootArg)
 
@@ -534,7 +540,8 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	p := strings.Split(path, "/org/")
 
 	if len(p) < 2 {
-		pathIn = path
+		p = strings.Split(path, basePath)
+		pathIn = p[len(p) - 1]
 	} else {
 		pathIn = "org/" + p[len(p) - 1] 
 	}
