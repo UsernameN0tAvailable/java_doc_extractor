@@ -1,6 +1,7 @@
 package main
 
 import (
+//	"fmt"
 	"strings"
 )
 
@@ -78,6 +79,8 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		className = scope.GetName() + "." + name
 	}
 
+	//fmt.Println(name)
+
 	var super string
 
 	if extendIndex < 1 {
@@ -86,6 +89,8 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		toFind :=RemoveTemplate(fields[extendIndex + 1])
 		super = imports.GetPath(toFind)
 	}
+
+	//fmt.Println("super", super)
 
 	implements := make([]string, 0)
 

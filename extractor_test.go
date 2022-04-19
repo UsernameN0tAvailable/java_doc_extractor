@@ -15,8 +15,7 @@ func TestNasty(t *testing.T) {
 	classes := extractor.Extract("java_test_data/CharMatcher.java")
 
 	for _,c := range classes {
-		fmt.Println(c.GetName())
-		fmt.Println(c.GetSuper())
+		fmt.Println("name:", c.GetName(), "super:", c.GetSuper())
 	}
 
 	assert.Equal(t, true, true) 
