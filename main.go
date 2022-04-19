@@ -438,7 +438,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 		} else if c == roundClose {
 			paramsScope--
 		}
-		 
+
 
 	}
 }
@@ -545,7 +545,12 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 
 	if len(p) < 2 {
 		p = strings.Split(path, "src/")
-		pathIn = p[len(p) - 1]
+		if len(p) < 2 {
+			p = strings.Split(path, basePath)
+			pathIn = p[len(p) - 1]
+		} else {
+			pathIn = p[len(p) - 1]
+		}
 	} else {
 		pathIn = "org/" + p[len(p) - 1] 
 	}
@@ -576,7 +581,7 @@ func isValidSignature(s string) bool {
 
 	if len(trimmed) == 0 {
 		return false
- 	} else {
+	} else {
 		fields := strings.Fields(trimmed)
 		predicate := fields[0]
 		if len(predicate) == 0 {
