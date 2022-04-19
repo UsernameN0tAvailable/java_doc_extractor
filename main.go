@@ -74,17 +74,20 @@ func (e *Extractor) SecondaryPackageMatches() {
 		super := class.GetSuper()
 
 		if len(super) > 0 && len(strings.Split(super, ".")) == 1 {
-
 			pack, err := class.GetPackage()
 
 			if err == nil {
 				for si,superScope := range e.classes {
-					if bi != si && superScope.IsClass() && superScope.IsInPackage(pack) {
+					if bi != si && superScope.IsInPackage(pack) {
+						sSplit := strings.Split(superScope.GetName(), ".")
+						lastExt := sSplit[len(sSplit) - 1]
+
 						newName := pack + "." + super
 						if superScope.GetName() == newName {	
 							e.classes[bi].SetSuper(newName)	
+						} else if lastExt == super {
+							e.classes[bi].SetSuper(superScope.GetName())
 						}
-
 					} 
 
 				} 
