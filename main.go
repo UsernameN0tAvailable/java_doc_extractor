@@ -130,7 +130,7 @@ func main() {
 		return
 	}
 
-	extractor := Extractor{classes: make([]Scope, 0, 20000), activeScopes: make([]*Scope, 0, 200), activeScope: nil}
+	extractor := NewExtractor()
 
 	classes := extractor.Extract(os.Args[1])
 
@@ -142,6 +142,10 @@ func main() {
 		fmt.Println("error", err)
 	}
 
+}
+
+func NewExtractor() Extractor {
+	return Extractor{classes: make([]Scope, 0, 20000), activeScopes: make([]*Scope, 0, 200), activeScope: nil}
 }
 
 
@@ -540,7 +544,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	p := strings.Split(path, "/org/")
 
 	if len(p) < 2 {
-		p = strings.Split(path, basePath)
+		p = strings.Split(path, "src/")
 		pathIn = p[len(p) - 1]
 	} else {
 		pathIn = "org/" + p[len(p) - 1] 
