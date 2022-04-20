@@ -126,6 +126,10 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 	} 
 }
 
+func (c*Scope) Imports(className string) bool {
+	return c.imports.IsImported(className)
+}
+
 func (c*Scope) IsInPackage(packSearched string) bool {
 	return c.imports.IsInPackage(packSearched)
 }
