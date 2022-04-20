@@ -57,12 +57,34 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	e.listDirs(root)
 
 	e.SecondaryPackageMatches()
-
-	//e.evaluate()
-
-	//os.Exit(3)
+	e.MatchTests()
 
 	return e.classes
+}
+
+
+/*
+* Very rudimentary test matching
+*/
+func (e *Extractor) MatchTests() {
+
+	for ci, class := range e.classes {
+
+		if !class.IsATest() {
+
+			for _, testClass := range e.classes {
+				if testClass.IsATest() {
+
+
+					if testClass.Imports(class.GetName()) {
+						//fmt.Println(class.GetName(), testClass.GetName())
+						e.classes[ci].AppendTestCase(testClass.GetName())
+					}
+				}
+			}
+		}
+	}
+	//os.Exit(3)
 }
 
 
@@ -680,51 +702,6 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 	}
 
 	return strings.TrimSpace(string(content[start: end]))
-
-	/*
-	end := i
-
-	fmt.Println(string(content[i + 1]))
-
-	bracketScopeCount := 0 
-	for true {
-
-		if i == lastElementEnd ||( bracketScopeCount == 0 && (content[i] == scopeOff || content[i] == slash || i == lastElementEnd || content[i] == semiColumn || content[i] == scopeOn)) {
-
-			var s string
-
-			if i < end {
-				s = strings.TrimSpace(string(content[i+1:end]))
-			} else {
-				s = ""
-			}
-
-
-			splt := strings.Split(s, "\n")
-			startIndex := 0
-
-			for i, c := range splt {
-				strBef := strings.TrimSpace(string(c))
-				if len(strBef) > 0 && strBef[0] != at {
-					startIndex = i
-					break
-				}
-			}
-			out := strings.TrimSpace( strings.Join(splt[startIndex:], ""))
-
-			return  out
-		} else if i >= 1 {
-			i--
-		}
-
-		if content[i] == roundClose {
-			bracketScopeCount++
-		} else if content[i] == roundOpen {
-			bracketScopeCount--
-		}
-	}
-
-	return ""  */
 }
 
 
@@ -746,6 +723,7 @@ func blankSpace(count int) string {
 
 type Imports struct {
 	imports []string
+	importUses [] string // InnerClasses used inside of code
 	packages []string
 }
 
@@ -773,7 +751,52 @@ func NewImports(c []byte) Imports {
 		fmt.Println("impossible")
 	}
 
-	return Imports{imports: imports, packages: packages} 
+	// fetch inner uses
+	importUses := make([]string, 0, len(imports) * 4)
+
+	contentWOTemplates := RemoveTemplate(content)
+
+	for _, imp := range imports {
+
+		importSplit := strings.Split(imp, ".")
+		ending :=  importSplit[len(importSplit) - 1]
+
+		contentSplit := strings.Split(contentWOTemplates, ending + ".")
+
+		if len(contentSplit) > 1 {
+			for i := 1; i < len(contentSplit); i += 2 {
+				chunk := contentSplit[i]
+				if len(chunk) > 1 {
+					firstChar := string(chunk[0])
+
+					if firstChar == strings.ToUpper(firstChar) {
+						roundSplit := strings.Split(chunk, ")")	
+
+						if len(roundSplit) < 2 {
+							roundSplit = strings.Split(chunk, "(")
+						}
+
+
+						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
+							token := strings.Fields(roundSplit[0])[0]
+							token = strings.Split(token, ",")[0]
+							token = strings.Split(token, ";")[0]
+							token = strings.Split(token, "\"")[0]
+							token = strings.Split(token, "..")[0]
+							token = strings.Split(token, "*/")[0]
+							token = strings.Split(token, "*")[0]
+							token = strings.TrimSpace(token)
+							if len(token) > 0 {
+								importUses = append(importUses, imp + "." + token)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return Imports{imports: imports, packages: packages, importUses: importUses} 
 }
 
 func (i*Imports) GetPackage() (string, error) {
@@ -784,6 +807,34 @@ func (i*Imports) GetPackage() (string, error) {
 	}
 }
 
+func (i*Imports) IsInPackage(searchedValue string) bool {
+	if len(i.packages) > 0 && i.packages[0] == searchedValue  {
+		return true
+	}
+	return false
+}
+
+func (i*Imports) IsImported(searchedValue string) bool {
+
+
+	if i.IsInPackage(searchedValue) {
+		return true
+	}
+
+	for _, imp := range i.imports {
+		if searchedValue == imp {
+			return true
+		}
+	}
+
+	for _, use := range i.importUses {
+		if searchedValue == use {
+			return true
+		}
+	}
+
+	return false
+}
 
 func (i*Imports) GetPath(name string) string {
 
