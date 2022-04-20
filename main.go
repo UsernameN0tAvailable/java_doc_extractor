@@ -74,6 +74,8 @@ func (e *Extractor) MatchTests() {
 
 			for _, testClass := range e.classes {
 				if testClass.IsATest() {
+
+
 					if testClass.Imports(class.GetName()) {
 						//fmt.Println(class.GetName(), testClass.GetName())
 						e.classes[ci].AppendTestCase(testClass.GetName())
@@ -764,27 +766,29 @@ func NewImports(c []byte) Imports {
 		if len(contentSplit) > 1 {
 			for i := 1; i < len(contentSplit); i += 2 {
 				chunk := contentSplit[i]
-				firstChar := string(chunk[0])
+				if len(chunk) > 1 {
+					firstChar := string(chunk[0])
 
-				if firstChar == strings.ToUpper(firstChar) {
-					roundSplit := strings.Split(chunk, ")")	
+					if firstChar == strings.ToUpper(firstChar) {
+						roundSplit := strings.Split(chunk, ")")	
 
-					if len(roundSplit) < 2 {
-						roundSplit = strings.Split(chunk, "(")
-					}
+						if len(roundSplit) < 2 {
+							roundSplit = strings.Split(chunk, "(")
+						}
 
 
-					if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
-						token := strings.Fields(roundSplit[0])[0]
-						token = strings.Split(token, ",")[0]
-						token = strings.Split(token, ";")[0]
-						token = strings.Split(token, "\"")[0]
-						token = strings.Split(token, "..")[0]
-						token = strings.Split(token, "*/")[0]
-						token = strings.Split(token, "*")[0]
-						token = strings.TrimSpace(token)
-						if len(token) > 0 {
-							importUses = append(importUses, imp + "." + token)
+						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
+							token := strings.Fields(roundSplit[0])[0]
+							token = strings.Split(token, ",")[0]
+							token = strings.Split(token, ";")[0]
+							token = strings.Split(token, "\"")[0]
+							token = strings.Split(token, "..")[0]
+							token = strings.Split(token, "*/")[0]
+							token = strings.Split(token, "*")[0]
+							token = strings.TrimSpace(token)
+							if len(token) > 0 {
+								importUses = append(importUses, imp + "." + token)
+							}
 						}
 					}
 				}
@@ -811,6 +815,7 @@ func (i*Imports) IsInPackage(searchedValue string) bool {
 }
 
 func (i*Imports) IsImported(searchedValue string) bool {
+
 
 	if i.IsInPackage(searchedValue) {
 		return true

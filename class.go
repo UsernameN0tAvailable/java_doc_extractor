@@ -107,7 +107,7 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		}	
 	}
 
-	isTest := strings.Contains(className, ".test.") || strings.Contains(className, "Test.java")
+	isTest := strings.Contains(className, ".test.") || strings.Contains(className, "Test") || strings.Contains(className, "Benchmark")
 
 	return Scope{
 		IsTest: isTest,
@@ -117,7 +117,7 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		path: path,
 		Doc: doc, 
 		visibility: vis,
-		Name: strings.TrimSpace(className),
+		Name: strings.TrimSpace(strings.Split(className, "(")[0]),
 		Super: super,
 		Interfaces: implements,
 		Methods: make([]Method, 0, 20),
