@@ -1,7 +1,6 @@
 package main
 
 import (
-//	"fmt"
 	"strings"
 )
 
@@ -17,14 +16,19 @@ type Scope struct {
 	fullPath string
 	imports Imports
 	ScopeType string `json:"type"`
+	IsTest bool `json:"isTest"`
+	Tests []string `json:"testClasses"`
 }
 
 func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
-
 func (s*Scope) IsInterface() bool {return s.ScopeType == "interface"}
-
 func (s*Scope) IsEnum() bool {return s.ScopeType == "enum"}
 func (s*Scope) IsRecord() bool {return s.ScopeType == "record"}
+func (s*Scope) IsATest() bool {return s.IsTest}
+
+func (s*Scope) AppendTestCase(testCase string) {
+	s.Tests = append(s.Tests, testCase)
+}
 
 func NewScope(fullPath string, signature string, doc string, path string, imports *Imports, scope *Scope) Scope {
 
@@ -69,7 +73,6 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 
 	pathSplt := strings.Split(strings.Split(path, ".java")[0], "/")
 
-
 	className := strings.Join(pathSplt, ".")
 
 	if staticIndex == -1 {
@@ -104,7 +107,10 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		}	
 	}
 
+	isTest := strings.Contains(className, ".test.") || strings.Contains(className, "Test.java")
+
 	return Scope{
+		IsTest: isTest,
 		ScopeType: scopeType,
 		fullPath: fullPath,
 		staticIndex: staticIndex,
@@ -116,16 +122,12 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		Interfaces: implements,
 		Methods: make([]Method, 0, 20),
 		imports: *imports,
+		Tests: make([]string, 0, 20),
 	} 
 }
 
 func (c*Scope) IsInPackage(packSearched string) bool {
-	pack, err := c.imports.GetPackage()
-	if err != nil {
-		return false
-	}
-
-	return pack == packSearched
+	return c.imports.IsInPackage(packSearched)
 }
 
 func (c*Scope) GetPackage() (string, error) {
