@@ -57,12 +57,41 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	e.listDirs(root)
 
 	e.SecondaryPackageMatches()
-
-	//e.evaluate()
+	e.MatchTests()
 
 	//os.Exit(3)
 
 	return e.classes
+}
+
+
+/*
+* Very rudimentary test matching
+*/
+func (e *Extractor) MatchTests() {
+
+	for ci, class := range e.classes {
+
+		if !class.IsATest() {
+
+			for _, testClass := range e.classes {
+				if testClass.IsATest() {
+
+					classNameSplit := strings.Split(class.GetName(), ".")
+					className := classNameSplit[len(classNameSplit) - 1]
+
+					testNameSplit := strings.Split(testClass.GetName(), ".")
+					testClassName := testNameSplit[len(testNameSplit) - 1]
+
+					if false {
+						fmt.Println(className, testClassName)
+						e.classes[ci].AppendTestCase(testClass.GetName())
+					}
+				}
+			}
+		}
+	}
+	//os.Exit(3)
 }
 
 
@@ -782,6 +811,14 @@ func (i*Imports) GetPackage() (string, error) {
 	} else {
 		return "", errors.New("No Package")
 	}
+}
+
+func (i*Imports) IsInPackage(searchedValue string) bool {
+
+	if len(i.packages) > 0 && i.packages[0] == searchedValue  {
+		return true
+	}
+	return false
 }
 
 
