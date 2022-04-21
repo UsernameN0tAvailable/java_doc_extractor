@@ -1,11 +1,11 @@
 package main
 
 import (
+//	"fmt"
 	"strings"
 )
 
 type Scope struct {
-	path string 
 	Doc string  `json:"documentation"`
 	visibility string
 	Name string  `json:"name"`
@@ -30,7 +30,7 @@ func (s*Scope) AppendTestCase(testCase string) {
 	s.Tests = append(s.Tests, testCase)
 }
 
-func NewScope(fullPath string, signature string, doc string, path string, imports *Imports, scope *Scope) Scope {
+func NewScope(fullPath string, signature string, doc string, imports *Imports, scope *Scope) Scope {
 
 	fields := strings.Fields(strings.TrimSpace(RemoveTemplate(signature)))
 
@@ -71,18 +71,15 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		vis = strings.Join(fields[:classIndex], " ")
 	}
 
-	pathSplt := strings.Split(strings.Split(path, ".java")[0], "/")
+	pack, _ := imports.GetPackage()
 
-	className := strings.Join(pathSplt, ".")
+	var className string
 
 	if staticIndex == -1 {
-		pathSplt[len(pathSplt) - 1] = name 
-		className = strings.Join(pathSplt, ".")
+		className = pack + "." + name
 	}  else {
 		className = scope.GetName() + "." + name
 	}
-
-	//fmt.Println(name)
 
 	var super string
 
@@ -92,8 +89,6 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		toFind :=RemoveTemplate(fields[extendIndex + 1])
 		super = imports.GetPath(toFind)
 	}
-
-	//fmt.Println("super", super)
 
 	implements := make([]string, 0)
 
@@ -114,7 +109,6 @@ func NewScope(fullPath string, signature string, doc string, path string, import
 		ScopeType: scopeType,
 		fullPath: fullPath,
 		staticIndex: staticIndex,
-		path: path,
 		Doc: doc, 
 		visibility: vis,
 		Name: strings.TrimSpace(strings.Split(className, "(")[0]),
@@ -144,10 +138,6 @@ func (c*Scope) GetMethods() []Method {
 
 func (c * Scope) AppendMethod(m Method) {
 	c.Methods = append(c.Methods, m)
-}
-
-func (c * Scope) GetPath() string {
-	return c.path
 }
 
 func (c * Scope) GetFullPath() string {

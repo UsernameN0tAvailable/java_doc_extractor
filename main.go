@@ -129,9 +129,10 @@ func (e *Extractor) SecondaryPackageMatches() {
 
 				if err == nil {
 					for _, superScope := range e.classes {
+
 						if superScope.IsInterface() && superScope.IsInPackage(pack) {
 							newName := pack + "." + inter 
-							if superScope.IsClass() && superScope.GetName() == newName {	
+							if superScope.GetName() == newName {	
 								e.classes[bi].SetInterface(newName, ii)	
 							}
 
@@ -564,24 +565,8 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 		}
 	}
 
-	var pathIn string
-
-	p := strings.Split(path, "/org/")
-
-	if len(p) < 2 {
-		p = strings.Split(path, "src/")
-		if len(p) < 2 {
-			p = strings.Split(path, basePath)
-			pathIn = p[len(p) - 1]
-		} else {
-			pathIn = p[len(p) - 1]
-		}
-	} else {
-		pathIn = "org/" + p[len(p) - 1] 
-	}
-
 	if isContainerScope {
-		e.classes = append(e.classes, NewScope(path, s, doc, pathIn, imports, e.activeScope))	
+		e.classes = append(e.classes, NewScope(path, s, doc, imports, e.activeScope))	
 	} else if e.activeScope != nil {
 		e.activeScope.AppendMethod(NewMethod(s, doc))
 	}
