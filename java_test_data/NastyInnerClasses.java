@@ -13,6 +13,8 @@ import org.junit.Test;
 public class NastyInnerClasses {
 
 	public int doSmth() {
+		
+		s Something = new Something();
 
 		if (1 > 2) {
 			while(true) {
@@ -20,6 +22,9 @@ public class NastyInnerClasses {
 			}
 		}
 		return 12;
+
+
+
 
 	}
 
@@ -59,6 +64,10 @@ public class NastyInnerClasses {
 	}
 
 	static class NonOffendingPackageTests {
+
+	}
+
+	static class Something {
 
 	}
 }
