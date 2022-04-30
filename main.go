@@ -57,7 +57,7 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	e.listDirs(root)
 
 	e.SecondaryPackageMatches()
-	e.MatchTests()
+	e.MatchUsages()
 
 	return e.classes
 }
@@ -66,7 +66,7 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 /*
 * Very rudimentary test matching
 */
-func (e *Extractor) MatchTests() {
+func (e *Extractor) MatchUsages() {
 
 	for ci, class := range e.classes {
 
@@ -74,8 +74,6 @@ func (e *Extractor) MatchTests() {
 
 			for _, testClass := range e.classes {
 				if testClass.IsATest() {
-
-
 					if testClass.Imports(class.GetName()) {
 						//fmt.Println(class.GetName(), testClass.GetName())
 						e.classes[ci].AppendTestCase(testClass.GetName())

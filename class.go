@@ -20,6 +20,8 @@ type Scope struct {
 	Tests []string `json:"testClasses"`
 	SubClasses []string `json:"subClasses"`
 	ImplementedBy []string `json:"implementedBy"`
+	Uses []string `json:"uses"`
+	UsedBy []string `json:"usedBy"`
 }
 
 func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
@@ -27,10 +29,6 @@ func (s*Scope) IsInterface() bool {return s.ScopeType == "interface"}
 func (s*Scope) IsEnum() bool {return s.ScopeType == "enum"}
 func (s*Scope) IsRecord() bool {return s.ScopeType == "record"}
 func (s*Scope) IsATest() bool {return s.IsTest}
-
-func (s*Scope) AppendTestCase(testCase string) {
-	s.Tests = append(s.Tests, testCase)
-}
 
 func NewScope(fullPath string, signature string, doc string, imports *Imports, scope *Scope) Scope {
 
@@ -121,41 +119,44 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		Tests: make([]string, 0, 20),
 		SubClasses: make([]string, 0, 20),
 		ImplementedBy: make([]string, 0, 20),
+		Uses: make([]string, 0, 20),
+		UsedBy: make([]string, 0, 20),
 	} 
 }
 
 
-func (c*Scope) AppendImplementedBy(inter string) {
-
-	isStored := false
-
-	for _, i := range c.ImplementedBy {
-		if inter == i {
-			isStored = true
-			break
-		}
+func (s*Scope) AppendTestCase(testCase string) {
+	if !isStored(s.Tests, testCase) {
+		s.Tests = append(s.Tests, testCase)
 	}
+}
 
-	if !isStored {
+
+func (c*Scope) AppendImplementedBy(inter string) {
+	if !isStored(c.ImplementedBy, inter) {
 		c.ImplementedBy = append(c.ImplementedBy, inter)
 	}
 
 }
 
 func (c*Scope) AppendSubClass(subClass string) {
-
-	isStored := false
-
-	for _, sc := range c.SubClasses {
-		if sc == subClass {
-			isStored = true
-			break
-		}
-	}
-
-	if !isStored {
+	if !isStored(c.SubClasses, subClass) {
 		c.SubClasses = append(c.SubClasses, subClass)
 	}
+}
+
+
+func isStored(stack []string, hay string) bool {
+	contains := false
+
+	for _, v := range stack {
+		if v == hay {
+			contains = true
+			break
+		}
+
+	}
+	return contains
 }
 
 func (c*Scope) Imports(className string) bool {
