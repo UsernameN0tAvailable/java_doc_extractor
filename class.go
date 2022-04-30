@@ -3,6 +3,8 @@ package main
 import (
 	//	"fmt"
 	//	"fmt"
+	//	"fmt"
+	//	"fmt"
 //	"fmt"
 	"strings"
 )
@@ -27,6 +29,7 @@ type Scope struct {
 	UsedBy []string `json:"usedBy"`
 	IsPrivate bool `json:"isPrivate"`
 	body string
+	InnerClasses []string
 }
 
 func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
@@ -132,12 +135,17 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		UsedBy: make([]string, 0, 20),
 		IsPrivate: !visible,
 		body: "",
+		InnerClasses: make([]string, 0, 20),
 	} 
 }
 
+func (s *Scope) AddInnerClass(class string) {
+	s.InnerClasses = append(s.InnerClasses, class)
+	s.imports.imports = append(s.imports.imports, class)
+}
 
 func (s *Scope) AddBody(body string, imports *Imports) {
-	s.tmpUses = imports.SearchUses(body)
+	s.tmpUses = imports.SearchUses(body, s.InnerClasses)
 }
 
 func (s *Scope) IsVisible() bool {

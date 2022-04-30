@@ -63,7 +63,7 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 
 	for _,c := range e.classes {
 		if !c.IsATest() && len(c.Tests) == 0 && len(c.SubClasses) == 0 && len(c.ImplementedBy) == 0 && len(c.UsedBy) == 0 && (c.IsClass() || c.IsInterface()) {
-		//	fmt.Println(c.GetFullPath(), len(c.Uses), c.GetName())
+			//	fmt.Println(c.GetFullPath(), len(c.Uses), c.GetName())
 			count++
 		}
 
@@ -416,6 +416,11 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			if isContainerScope {
 				active := &e.classes[len(e.classes) - 1]
+
+				if e.activeScope != nil {
+					e.activeScope.AddInnerClass(active.GetName())
+				}
+
 				e.activeScopes = append(e.activeScopes, active)
 				e.activeScope = active
 			}  else {
@@ -756,7 +761,23 @@ func NewImports(c []byte) (Imports, error) {
 	return Imports{imports: imports, pack: pack, importUses: make([]string, 0, 10)}, nil
 }
 
-func (i *Imports) SearchUses(body string) [] string {
+func (i *Imports) SearchUses(b string, innerClasses []string) [] string {
+
+	// remove inner class declarations
+	body := b
+
+	for _, icName := range innerClasses {
+
+		icSplit := strings.Split(icName, ".")
+		ic := icSplit[len(icSplit) - 1]
+
+		body = strings.Join(strings.Split(body, "inteface " + ic), "")
+		body = strings.Join(strings.Split(body, "class " + ic), "")
+		body = strings.Join(strings.Split(body, "enum " + ic), "")
+		body = strings.Join(strings.Split(body, "record " + ic), "")
+
+		i.imports = append(i.imports, icName)
+	}
 
 	importUses := make([]string, 0, len(i.imports) * 4)
 
@@ -771,34 +792,34 @@ func (i *Imports) SearchUses(body string) [] string {
 			for i := 1; i < len(contentSplit); i += 2 {
 				chunk := contentSplit[i]
 				if len(chunk) > 1 {	
-						roundSplit := strings.Split(chunk, "(")	
+					roundSplit := strings.Split(chunk, "(")	
 
-						if len(roundSplit) < 2 {
-							roundSplit = strings.Split(chunk, ")")
+					if len(roundSplit) < 2 {
+						roundSplit = strings.Split(chunk, ")")
+					}
+
+					if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
+
+						token := ""
+
+						splt := strings.Fields(roundSplit[0])
+
+						if len(splt) > 0 {
+							token = splt[0]
 						}
 
-						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
+						token = strings.Split(token, ",")[0]
+						token = strings.Split(token, ";")[0]
+						token = strings.Split(token, "\"")[0]
+						token = strings.Split(token, "..")[0]
+						token = strings.Split(token, "*/")[0]
+						token = strings.Split(token, "*")[0]
+						token = strings.TrimSpace(token)
 
-							token := ""
-
-							splt := strings.Fields(roundSplit[0])
-
-							if len(splt) > 0 {
-								token = splt[0]
-							}
-
-							token = strings.Split(token, ",")[0]
-							token = strings.Split(token, ";")[0]
-							token = strings.Split(token, "\"")[0]
-							token = strings.Split(token, "..")[0]
-							token = strings.Split(token, "*/")[0]
-							token = strings.Split(token, "*")[0]
-							token = strings.TrimSpace(token)
-
-							if len(token) > 0 {
-								importUses = append(importUses, RemoveTemplate(imp + "." + token))
-							}
-						}	
+						if len(token) > 0 {
+							importUses = append(importUses, RemoveTemplate(imp + "." + token))
+						}
+					}	
 				}
 			}
 		} else {
@@ -806,37 +827,20 @@ func (i *Imports) SearchUses(body string) [] string {
 			// in case it is a static function
 			contentSplit := strings.Split(body, " " + ending + "(")
 
-			for i := 1; i < len(contentSplit); i += 2 {
-				chunk := contentSplit[i]
-				if len(chunk) > 1 {	
+			if len(contentSplit) > 1 {
+				for i := 1; i < len(contentSplit); i += 2 {
+					chunk := contentSplit[i]
+					if len(chunk) > 1 {	
 						roundSplit := strings.Split(chunk, "(")	
 
 						if len(roundSplit) < 2 {
 							roundSplit = strings.Split(chunk, ")")
 						}
 
-						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
-
-							token := ""
-
-							splt := strings.Fields(roundSplit[0])
-
-							if len(splt) > 0 {
-								token = splt[0]
-							}
-
-							token = strings.Split(token, ",")[0]
-							token = strings.Split(token, ";")[0]
-							token = strings.Split(token, "\"")[0]
-							token = strings.Split(token, "..")[0]
-							token = strings.Split(token, "*/")[0]
-							token = strings.Split(token, "*")[0]
-							token = strings.TrimSpace(token)
-
-							if len(token) > 0 {
-								importUses = append(importUses, RemoveTemplate(imp))
-							}
+						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {		
+							importUses = append(importUses, RemoveTemplate(imp))	
 						}	
+					}
 				}
 			}
 		}
@@ -847,7 +851,6 @@ func (i *Imports) SearchUses(body string) [] string {
 
 func (i*Imports) GetPackage() string {
 	return i.pack
-
 }
 
 func (i*Imports) IsInPackage(searchedValue string) bool {
@@ -860,7 +863,6 @@ func (i*Imports) IsInPackage(searchedValue string) bool {
 func (i*Imports) IsImported(searchedClass *Scope) bool {
 
 	searchedValue := searchedClass.GetName()
-
 	if i.IsInPackage(searchedValue) {
 		return true
 	}
