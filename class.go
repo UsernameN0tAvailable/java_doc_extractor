@@ -240,15 +240,26 @@ func RemoveTemplate(name string) string {
 
 	result := ""
 
+	inString := false
+	inChar := false
+
 	for i, s := range name {
 
-		if string(s) == "<" {
+		if string(s) == "\"" {
+			inString = !inString
+		}
+
+		if string(s) == "'" {
+			inChar = !inChar
+		}
+
+		if string(s) == "<" && name[i+ 1] != byte('=') && !inString && !inChar {
 
 			count++
 			if count == 1 {
 				end = i 
 			}
-		} else if string(s) == ">" {
+		} else if string(s) == ">" && name[i+1] != byte('=') && !inString && !inChar {
 			count--
 
 			if count == 0 {
