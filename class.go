@@ -71,7 +71,7 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		vis = strings.Join(fields[:classIndex], " ")
 	}
 
-	pack, _ := imports.GetPackage()
+	pack := imports.GetPackage()
 
 	var className string
 
@@ -128,7 +128,7 @@ func (c*Scope) IsInPackage(packSearched string) bool {
 	return c.imports.IsInPackage(packSearched)
 }
 
-func (c*Scope) GetPackage() (string, error) {
+func (c*Scope) GetPackage() string {
 	return c.imports.GetPackage()
 }
 
