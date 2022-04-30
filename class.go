@@ -1,6 +1,8 @@
 package main
 
 import (
+	//	"fmt"
+	"fmt"
 	"strings"
 )
 
@@ -22,6 +24,7 @@ type Scope struct {
 	Uses []string `json:"uses"`
 	UsedBy []string `json:"usedBy"`
 	visible bool
+	body string
 }
 
 func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
@@ -125,7 +128,14 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		Uses: make([]string, 0, 20),
 		UsedBy: make([]string, 0, 20),
 		visible: visible,
+		body: "",
 	} 
+}
+
+
+func (s *Scope) AddBody(body string, imports *Imports) {
+	//s.body = body
+	s.Uses = imports.SearchUses(body)
 }
 
 func (s *Scope) IsVisible() bool {

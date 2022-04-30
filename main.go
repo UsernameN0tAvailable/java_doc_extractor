@@ -301,7 +301,6 @@ func inProject(path string,projectName string) bool {
 		}
 	}
 
-
 	return isMatch
 }
 
@@ -357,6 +356,8 @@ func (e* Extractor) parseFile(content []byte, path string) {
 	start := 0
 	lastElementEnd := 0
 	scopeCount := 0
+
+	scopeStarts := make([]int, 0, 100)
 
 	doc := ""
 
@@ -431,6 +432,8 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			}  else {
 				e.activeScopes = append(e.activeScopes, nil)
 			} 
+
+			scopeStarts = append(scopeStarts, i)
 			lastElementEnd = i
 
 		} else if c == scopeOff && !inComment && !inString && !inChar && paramsScope == 0 {
@@ -438,6 +441,13 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			lastElementEnd = i
 			doc = ""
 
+			body := content[scopeStarts[len(scopeStarts) - 1]:i]
+
+			if e.activeScopes[len(e.activeScopes) - 1] != nil {
+				e.activeScopes[len(e.activeScopes) - 1].AddBody(RemoveTemplate(string(removeComment(body))), &imports)
+			}
+
+			scopeStarts = scopeStarts[:len(scopeStarts) - 1]
 			e.activeScopes = e.activeScopes[:(len(e.activeScopes) - 1)]
 			if len(e.activeScopes) > 0 {
 				e.activeScope = e.activeScopes[len(e.activeScopes) - 1]
@@ -478,8 +488,6 @@ func (e* Extractor) parseFile(content []byte, path string) {
 		} else if c == roundClose {
 			paramsScope--
 		}
-
-
 	}
 }
 
@@ -755,31 +763,26 @@ func NewImports(c []byte) (Imports, error) {
 		return *new(Imports), errors.New("No Package Found!!")
 	}
 
-	// fetch inner uses
-	importUses := make([]string, 0, len(imports) * 4)
 
-	contentWOTemplates := RemoveTemplate(content)
+	return Imports{imports: imports, pack: pack, importUses: make([]string, 0, 10)}, nil
+}
 
-	for _, imp := range imports {
+func (i *Imports) SearchUses(body string) [] string {
+
+	importUses := make([]string, 0, len(i.imports) * 4)
+
+	for _, imp := range i.imports {
 
 		importSplit := strings.Split(imp, ".")
 		ending :=  importSplit[len(importSplit) - 1]
 
-		contentSplit := strings.Split(contentWOTemplates, ending + ".")
+		contentSplit := strings.Split(body, " " + ending + ".")
 
 		if len(contentSplit) > 1 {
 			for i := 1; i < len(contentSplit); i += 2 {
 				chunk := contentSplit[i]
-				if len(chunk) > 1 {
-					firstChar := string(chunk[0])
-
-					if firstChar == strings.ToUpper(firstChar) {
-						roundSplit := strings.Split(chunk, ")")	
-
-						if len(roundSplit) < 2 {
-							roundSplit = strings.Split(chunk, "(")
-						}
-
+				if len(chunk) > 1 {	
+						roundSplit := strings.Split(chunk, "(")	
 
 						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
 							token := strings.Fields(roundSplit[0])[0]
@@ -793,14 +796,13 @@ func NewImports(c []byte) (Imports, error) {
 							if len(token) > 0 {
 								importUses = append(importUses, RemoveTemplate(imp + "." + token))
 							}
-						}
-					}
+						}	
 				}
 			}
 		}
 	}
 
-	return Imports{imports: imports, pack: pack, importUses: importUses}, nil
+	return importUses
 }
 
 func (i*Imports) GetPackage() string {
