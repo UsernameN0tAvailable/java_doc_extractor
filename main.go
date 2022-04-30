@@ -70,17 +70,17 @@ func (e *Extractor) MatchUsages() {
 
 	for ci, class := range e.classes {
 
-		if !class.IsATest() {
-
-			for _, testClass := range e.classes {
-				if testClass.IsATest() {
-					if testClass.Imports(class.GetName()) {
-						//fmt.Println(class.GetName(), testClass.GetName())
-						e.classes[ci].AppendTestCase(testClass.GetName())
-					}
+		for ui, usedByClass := range e.classes {
+			if usedByClass.Imports(class.GetName()) {
+				// match tests and benchmarks
+				if !class.IsATest() && usedByClass.IsATest() {	
+					e.classes[ci].AppendTestCase(usedByClass.GetName())
+				} else {
+					e.classes[ci].AppendUsedBy(usedByClass.GetName())
 				}
+				e.classes[ui].AppendUses(class.GetName())
 			}
-		}
+		} 
 	}
 }
 
@@ -774,7 +774,7 @@ func NewImports(c []byte) (Imports, error) {
 							token = strings.Split(token, "*")[0]
 							token = strings.TrimSpace(token)
 							if len(token) > 0 {
-								importUses = append(importUses, imp + "." + token)
+								importUses = append(importUses, RemoveTemplate(imp + "." + token))
 							}
 						}
 					}

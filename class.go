@@ -124,6 +124,17 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 	} 
 }
 
+func (s* Scope) AppendUses(u string) {
+	if !isStored(s.Uses, u) {
+		s.Uses = append(s.Uses, u)
+	}
+}
+
+func (s*Scope) AppendUsedBy(use string) {
+	if !isStored(s.UsedBy, use) {
+		s.UsedBy = append(s.UsedBy, use)
+	}
+}
 
 func (s*Scope) AppendTestCase(testCase string) {
 	if !isStored(s.Tests, testCase) {
