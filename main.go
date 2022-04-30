@@ -386,6 +386,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				signature = findSignature(i, content, lastElementEnd + 1)
 			}
 
+
 			sigArr := make([]string, 0, 10)
 
 			for _,s := range strings.Split(signature, "\n") {
@@ -400,9 +401,8 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			isContainerScope := false
 
 			if isValidSignature(signature) {	
-				isContainerScope = e.storeSignature(signature, doc, path, &imports) 	
-			}
-
+				isContainerScope = e.storeSignature(signature, doc, path, &imports) 		
+			} 
 
 			if isContainerScope {
 				active := &e.classes[len(e.classes) - 1]
@@ -552,8 +552,6 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	isContainerScope := false
 	fields := strings.Fields(s)
 
-	//fmt.Println(fields)
-
 	paramsOpen := false
 
 	for _, f := range fields {
@@ -565,7 +563,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 			paramsOpen = false
 		}
 
-		if !paramsOpen && ( fT == "class" || fT == "enum" || fT == "record" || fT == "interface") {
+		if !paramsOpen && ( fT == "class" || fT == "enum" || fT == "record" || fT == "interface" || fT == "@interface") {
 			isContainerScope = true
 			break 
 		}
