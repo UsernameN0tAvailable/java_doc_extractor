@@ -1,11 +1,6 @@
 package main
 
 import (
-	//	"fmt"
-	//	"fmt"
-	//	"fmt"
-	//	"fmt"
-//	"fmt"
 	"strings"
 )
 
@@ -52,7 +47,7 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		if p == "class" {
 			classIndex = i
 			scopeType = "class"
-		} else if p == "interface" {
+		} else if p == "interface" || p == "@interface" {
 			classIndex = i
 			scopeType = "interface"
 		} else if p == "enum" {
