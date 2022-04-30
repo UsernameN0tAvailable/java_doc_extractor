@@ -22,9 +22,10 @@ type Scope struct {
 	Tests []string `json:"testClasses"`
 	SubClasses []string `json:"subClasses"`
 	ImplementedBy []string `json:"implementedBy"`
+	tmpUses []string
 	Uses []string `json:"uses"`
 	UsedBy []string `json:"usedBy"`
-	visible bool
+	IsPrivate bool `json:"isPrivate"`
 	body string
 }
 
@@ -126,20 +127,21 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		Tests: make([]string, 0, 20),
 		SubClasses: make([]string, 0, 20),
 		ImplementedBy: make([]string, 0, 20),
+		tmpUses: make([]string, 0, 20),
 		Uses: make([]string, 0, 20),
 		UsedBy: make([]string, 0, 20),
-		visible: visible,
+		IsPrivate: !visible,
 		body: "",
 	} 
 }
 
 
 func (s *Scope) AddBody(body string, imports *Imports) {
-	s.Uses = imports.SearchUses(body)
+	s.tmpUses = imports.SearchUses(body)
 }
 
 func (s *Scope) IsVisible() bool {
-	return s.visible
+	return !s.IsPrivate
 }
 
 func (s* Scope) AppendUses(u string) {
@@ -189,7 +191,21 @@ func isStored(stack []string, hay string) bool {
 }
 
 func (c*Scope) Imports(scope *Scope) bool {
-	return c.imports.IsImported(scope)
+
+	if c.imports.IsImported(scope) {
+		return true
+	}
+
+	for _, uses := range c.tmpUses {
+		for _,m := range scope.GetStaticMethods() {
+			if m == uses {
+				return true
+			}
+		}
+	}
+
+
+	return false
 }
 
 func (c*Scope) IsInPackage(packSearched string) bool {
