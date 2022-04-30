@@ -2,7 +2,8 @@ package main
 
 import (
 	//	"fmt"
-	"fmt"
+	//	"fmt"
+//	"fmt"
 	"strings"
 )
 
@@ -134,7 +135,6 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 
 
 func (s *Scope) AddBody(body string, imports *Imports) {
-	//s.body = body
 	s.Uses = imports.SearchUses(body)
 }
 

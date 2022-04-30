@@ -400,12 +400,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				signature = string(findFirstSignature(i, content, lastElementEnd))	
 			} else {
 				signature = findSignature(i, content, lastElementEnd + 1)
-				//fmt.Println(signature)
 			}
-
-			//fmt.Println("removed", RemoveTemplate(signature))
-
-			//			fmt.Println(signature)
 
 			sigArr := make([]string, 0, 10)
 
@@ -443,9 +438,9 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			body := content[scopeStarts[len(scopeStarts) - 1]:i]
 
-			if e.activeScopes[len(e.activeScopes) - 1] != nil {
+			if len(e.activeScopes) > 0 && e.activeScopes[len(e.activeScopes) - 1] != nil {
 				e.activeScopes[len(e.activeScopes) - 1].AddBody(RemoveTemplate(string(removeComment(body))), &imports)
-			}
+			} 
 
 			scopeStarts = scopeStarts[:len(scopeStarts) - 1]
 			e.activeScopes = e.activeScopes[:(len(e.activeScopes) - 1)]
@@ -483,9 +478,9 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			escape = true
 		} else if escape && (inString || inChar) {
 			escape = false
-		} else if c == roundOpen {
+		} else if c == roundOpen && !inString && !inChar && !inComment  {
 			paramsScope ++
-		} else if c == roundClose {
+		} else if c == roundClose && !inString && !inChar && !inComment {
 			paramsScope--
 		}
 	}
@@ -784,8 +779,20 @@ func (i *Imports) SearchUses(body string) [] string {
 				if len(chunk) > 1 {	
 						roundSplit := strings.Split(chunk, "(")	
 
+						if len(roundSplit) < 2 {
+							roundSplit = strings.Split(chunk, ")")
+						}
+
 						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
-							token := strings.Fields(roundSplit[0])[0]
+
+							token := ""
+
+							splt := strings.Fields(roundSplit[0])
+
+							if len(splt) > 0 {
+								token = splt[0]
+							}
+
 							token = strings.Split(token, ",")[0]
 							token = strings.Split(token, ";")[0]
 							token = strings.Split(token, "\"")[0]
@@ -793,8 +800,47 @@ func (i *Imports) SearchUses(body string) [] string {
 							token = strings.Split(token, "*/")[0]
 							token = strings.Split(token, "*")[0]
 							token = strings.TrimSpace(token)
+
 							if len(token) > 0 {
 								importUses = append(importUses, RemoveTemplate(imp + "." + token))
+							}
+						}	
+				}
+			}
+		} else {
+
+			// in case it is a static function
+			contentSplit := strings.Split(body, " " + ending + "(")
+
+			for i := 1; i < len(contentSplit); i += 2 {
+				chunk := contentSplit[i]
+				if len(chunk) > 1 {	
+						roundSplit := strings.Split(chunk, "(")	
+
+						if len(roundSplit) < 2 {
+							roundSplit = strings.Split(chunk, ")")
+						}
+
+						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
+
+							token := ""
+
+							splt := strings.Fields(roundSplit[0])
+
+							if len(splt) > 0 {
+								token = splt[0]
+							}
+
+							token = strings.Split(token, ",")[0]
+							token = strings.Split(token, ";")[0]
+							token = strings.Split(token, "\"")[0]
+							token = strings.Split(token, "..")[0]
+							token = strings.Split(token, "*/")[0]
+							token = strings.Split(token, "*")[0]
+							token = strings.TrimSpace(token)
+
+							if len(token) > 0 {
+								importUses = append(importUses, RemoveTemplate(imp))
 							}
 						}	
 				}
@@ -832,7 +878,7 @@ func (i*Imports) IsImported(searchedClass *Scope) bool {
 	}
 
 	for _, use := range i.importUses {
-		if searchedValue == use {
+		if len(strings.Split(use, searchedValue)) > 1  {
 			return true
 		}
 	}
