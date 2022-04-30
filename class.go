@@ -216,6 +216,21 @@ func (c*Scope) Imports(scope *Scope) bool {
 	return false
 }
 
+func (c *Scope) UsesClass(class *Scope) bool {
+
+	if !c.Imports(class) {return false}
+
+	className := class.GetName()
+
+	for _, u := range c.tmpUses {
+		if u == className {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (c*Scope) IsInPackage(packSearched string) bool {
 	return c.imports.IsInPackage(packSearched)
 }

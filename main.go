@@ -69,6 +69,9 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 
 	}
 
+	fmt.Println(count, len(e.classes))
+	panic("")
+
 	return e.classes
 }
 
@@ -81,7 +84,7 @@ func (e *Extractor) MatchUsages() {
 	for ci, class := range e.classes {
 
 		for ui, usedByClass := range e.classes {
-			if usedByClass.GetName() != class.GetName() && usedByClass.Imports(&class) {
+			if usedByClass.GetName() != class.GetName() && usedByClass.UsesClass(&class) {
 				// match tests and benchmarks
 				if !class.IsATest() && usedByClass.IsATest() {	
 					e.classes[ci].AppendTestCase(usedByClass.GetName())
