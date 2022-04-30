@@ -351,7 +351,13 @@ func (e* Extractor) parseFile(content []byte, path string) {
 		return
 	}
 
+	//fmt.Println(string(content))
+
 	for i, c := range content {
+
+
+		//printLine(content, i)
+		//fmt.Println(inComment, inString, inChar, paramsScope, scopeCount)
 
 		if c == slash && !inString && !inChar {
 			nextIndex := i + 1
@@ -492,6 +498,7 @@ func removeComment(v []byte) []byte {
 
 
 	isMultiline := false
+	inDocumentation := false
 	isSingleLine := false
 	inString := false
 	inChar := false
@@ -504,6 +511,7 @@ func removeComment(v []byte) []byte {
 
 	for i,b := range v  {
 
+
 		nextIndex := i + 1
 		if b == byte('"') && len(v) > nextIndex + 1 && v[nextIndex] == byte('"') && v[nextIndex + 1] == byte('"') && !isEscape && !inChar && !inString && !isJson {
 			isJson = true
@@ -513,29 +521,36 @@ func removeComment(v []byte) []byte {
 			endChunk := string(v[nextIndex+2:])
 			return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
 
-		} else if b == slash && !inString && !inChar && !isJson {
-			if !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == star && (!(len(v) > nextIndex + 1 && v[nextIndex+1] == star) || (len(v) > nextIndex + 2 && v[nextIndex+1] == star && v[nextIndex + 2] == star)){
+		} else if b == slash && !inString && !inChar && !isJson && !inDocumentation {
+
+			if !inDocumentation && !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == star && len(v) > nextIndex + 1 && v[nextIndex+1] == star  {
+				inDocumentation = true
+
+
+			} else if !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == star && (!(len(v) > nextIndex + 1 && v[nextIndex+1] == star) || (len(v) > nextIndex + 2 && v[nextIndex+1] == star && v[nextIndex + 2] == star)){
 				isMultiline = true
 				start = i
 			} else if !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == slash {
 				isSingleLine = true
 				start = i
 			}
-		} else if b == star && !inString && !inChar && !isJson {
+		} else if b == star && !inString && !inChar && !isJson && !inDocumentation {
 			if isMultiline && l > nextIndex && v[nextIndex] == slash {
 				firstChunk := string(v[:start])
 				endChunk := string(v[nextIndex+1:])
 				return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+			} else if inDocumentation && l > nextIndex && v[nextIndex] == slash {
+				inDocumentation = false
 			}
-		} else if b == newLine && isSingleLine && !inChar && !inString && !isJson {
+		} else if b == newLine && isSingleLine && !inChar && !inString && !isJson && !inDocumentation {
 			firstChunk := string(v[:start])
 			endChunk := string(v[i:])
 			return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
-		} else if b == byte('"') && !isMultiline && !isSingleLine && !inChar && !isEscape && !isJson {
+		} else if b == byte('"') && !isMultiline && !isSingleLine && !inChar && !isEscape && !isJson && !inDocumentation {
 			inString = !inString
-		} else if b == byte('\'') && !isMultiline && !isSingleLine && !inString && !isEscape && !isJson {
+		} else if b == byte('\'') && !isMultiline && !isSingleLine && !inString && !isEscape && !isJson && !inDocumentation {
 			inChar = !inChar
-		} else if b == backSlash && (inString || inChar) && !isEscape && !isJson {
+		} else if b == backSlash && (inString || inChar) && !isEscape && !isJson && !inDocumentation {
 			isEscape = true
 		} else if (inString || inChar) && isEscape {
 			isEscape = false
