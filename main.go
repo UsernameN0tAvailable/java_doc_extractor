@@ -59,6 +59,22 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
 
+
+	count := 0
+
+
+	for _,c := range e.classes {
+		if c.IsVisible() && !c.IsATest() && len(c.Tests) == 0 && len(c.SubClasses) == 0 && len(c.ImplementedBy) == 0 && len(c.UsedBy) == 0 && (c.IsClass() || c.IsInterface()) {
+			fmt.Println(c.GetFullPath(), len(c.Uses), c.GetName())
+			count++
+
+		}
+
+	}
+
+	fmt.Println(count, len(e.classes))
+	panic("")
+
 	return e.classes
 }
 
@@ -71,7 +87,7 @@ func (e *Extractor) MatchUsages() {
 	for ci, class := range e.classes {
 
 		for ui, usedByClass := range e.classes {
-			if usedByClass.Imports(class.GetName()) {
+			if usedByClass.GetName() != class.GetName() && usedByClass.Imports(&class) {
 				// match tests and benchmarks
 				if !class.IsATest() && usedByClass.IsATest() {	
 					e.classes[ci].AppendTestCase(usedByClass.GetName())
@@ -380,12 +396,13 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			var signature string
 			if scopeCount == 0 {
-
 				signature = string(findFirstSignature(i, content, lastElementEnd))	
 			} else {
 				signature = findSignature(i, content, lastElementEnd + 1)
 				//fmt.Println(signature)
 			}
+
+			//fmt.Println("removed", RemoveTemplate(signature))
 
 			//			fmt.Println(signature)
 
@@ -798,8 +815,9 @@ func (i*Imports) IsInPackage(searchedValue string) bool {
 	return false
 }
 
-func (i*Imports) IsImported(searchedValue string) bool {
+func (i*Imports) IsImported(searchedClass *Scope) bool {
 
+	searchedValue := searchedClass.GetName()
 
 	if i.IsInPackage(searchedValue) {
 		return true
@@ -814,6 +832,14 @@ func (i*Imports) IsImported(searchedValue string) bool {
 	for _, use := range i.importUses {
 		if searchedValue == use {
 			return true
+		}
+	}
+
+	for _, m := range searchedClass.GetStaticMethods() {
+		for _,i := range i.imports {
+			if i == m {
+				return true
+			}
 		}
 	}
 

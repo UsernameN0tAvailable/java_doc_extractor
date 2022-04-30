@@ -1,7 +1,6 @@
 package main
 
 import (
-	//	"fmt"
 	"strings"
 )
 
@@ -22,6 +21,7 @@ type Scope struct {
 	ImplementedBy []string `json:"implementedBy"`
 	Uses []string `json:"uses"`
 	UsedBy []string `json:"usedBy"`
+	visible bool
 }
 
 func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
@@ -39,6 +39,7 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 	implementsIndex := -1
 	staticIndex := -1
 	scopeType := "" 
+	visible := false
 	for i, p := range fields {
 		if p == "class" {
 			classIndex = i
@@ -58,6 +59,8 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 			implementsIndex = i
 		} else if p == "static" {
 			staticIndex = i
+		} else if p == "protected" || p == "public" {
+			visible = true
 		}
 	}
 
@@ -121,7 +124,12 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		ImplementedBy: make([]string, 0, 20),
 		Uses: make([]string, 0, 20),
 		UsedBy: make([]string, 0, 20),
+		visible: visible,
 	} 
+}
+
+func (s *Scope) IsVisible() bool {
+	return s.visible
 }
 
 func (s* Scope) AppendUses(u string) {
@@ -170,8 +178,8 @@ func isStored(stack []string, hay string) bool {
 	return contains
 }
 
-func (c*Scope) Imports(className string) bool {
-	return c.imports.IsImported(className)
+func (c*Scope) Imports(scope *Scope) bool {
+	return c.imports.IsImported(scope)
 }
 
 func (c*Scope) IsInPackage(packSearched string) bool {
@@ -184,6 +192,18 @@ func (c*Scope) GetPackage() string {
 
 func (c*Scope) GetMethods() []Method {
 	return c.Methods
+}
+
+func (c*Scope) GetStaticMethods() []string {
+	staticMethods := make([]string, 0, 10)
+
+	for _, m := range c.Methods {
+		if m.IsStatic() {
+			staticMethods = append(staticMethods, c.GetName() + "." + m.GetName())
+		}
+	}
+	return staticMethods
+
 }
 
 func (c * Scope) AppendMethod(m Method) {
@@ -253,13 +273,12 @@ func RemoveTemplate(name string) string {
 			inChar = !inChar
 		}
 
-		if string(s) == "<" && name[i+ 1] != byte('=') && !inString && !inChar {
-
+		if string(s) == "<" && (len(name) > i + 1 && name[i+ 1] != byte('=')) && !inString && !inChar {
 			count++
 			if count == 1 {
 				end = i 
 			}
-		} else if string(s) == ">" && name[i+1] != byte('=') && !inString && !inChar {
+		} else if string(s) == ">" && ((len(name) > i + 1 && name[i+1] != byte('=') && !inString && !inChar) || len(name) == i + 1) {
 			count--
 
 			if count == 0 {
