@@ -96,24 +96,23 @@ func (e *Extractor) SecondaryPackageMatches() {
 		super := class.GetSuper()
 
 		if len(super) > 0 && len(strings.Split(super, ".")) == 1 {
-			pack, err := class.GetPackage()
+			pack := class.GetPackage()
 
-			if err == nil {
-				for si,superScope := range e.classes {
-					if bi != si && superScope.IsInPackage(pack) {
-						sSplit := strings.Split(superScope.GetName(), ".")
-						lastExt := sSplit[len(sSplit) - 1]
+			for si,superScope := range e.classes {
+				if bi != si && superScope.IsInPackage(pack) {
+					sSplit := strings.Split(superScope.GetName(), ".")
+					lastExt := sSplit[len(sSplit) - 1]
 
-						newName := pack + "." + super
-						if superScope.GetName() == newName {	
-							e.classes[bi].SetSuper(newName)	
-						} else if lastExt == super {
-							e.classes[bi].SetSuper(superScope.GetName())
-						}
-					} 
-
+					newName := pack + "." + super
+					if superScope.GetName() == newName {	
+						e.classes[bi].SetSuper(newName)	
+					} else if lastExt == super {
+						e.classes[bi].SetSuper(superScope.GetName())
+					}
 				} 
-			}
+
+			} 
+
 		}
 	}
 
@@ -125,21 +124,20 @@ func (e *Extractor) SecondaryPackageMatches() {
 		for ii, inter := range interfaces {
 
 			if len(inter) > 0 && len(strings.Split(inter, ".")) == 1 {
-				pack, err := class.GetPackage()
+				pack := class.GetPackage()
 
-				if err == nil {
-					for _, superScope := range e.classes {
+				for _, superScope := range e.classes {
 
-						if superScope.IsInterface() && superScope.IsInPackage(pack) {
-							newName := pack + "." + inter 
-							if superScope.GetName() == newName {	
-								e.classes[bi].SetInterface(newName, ii)	
-							}
-
-						} 
+					if superScope.IsInterface() && superScope.IsInPackage(pack) {
+						newName := pack + "." + inter 
+						if superScope.GetName() == newName {	
+							e.classes[bi].SetInterface(newName, ii)	
+						}
 
 					} 
-				}
+
+				} 
+
 			}
 		}
 	}
@@ -351,7 +349,11 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 	doc := ""
 
-	imports := NewImports(content)
+	imports, err := NewImports(content)
+
+	if err != nil {
+		return
+	}
 
 	for i, c := range content {
 
@@ -709,31 +711,36 @@ func blankSpace(count int) string {
 type Imports struct {
 	imports []string
 	importUses [] string // InnerClasses used inside of code
-	packages []string
+	pack string
 }
 
 
-func NewImports(c []byte) Imports {
+func NewImports(c []byte) (Imports, error) {
 	content := string(c)
 
 	imports := make([]string, 0)
 
-	packages := make([]string, 0)
+	pack:= ""
 
 	lines := strings.Split(content, "\n")
 
 	for _,line := range lines {
 		splt := strings.Split(strings.TrimSpace(line), " ")
-		if len(splt) > 0 && splt[0] == "import" {
-			imports = append(imports, strings.Split(splt[len(splt) -1], ";")[0])
-		}
-		if len(splt) > 0 && splt[0] == "package" {
-			packages = append(packages, strings.Split(splt[len(splt) -1], ";")[0])
-		}
-	}
+		if len(splt) > 0 { 
+			if splt[0] == "import" {
+				imports = append(imports, strings.Split(splt[len(splt) -1], ";")[0])
+			} else if splt[0] == "package" {
+				if len(pack) > 0 {
+					return *new(Imports), errors.New("Two packages found!!")
+				}
+				pack = strings.Split(splt[len(splt) -1], ";")[0]
 
-	if len(packages) > 1 {
-		fmt.Println("impossible")
+			}
+		}
+	}	
+
+	if len(pack) == 0 {
+		return *new(Imports), errors.New("No Package Found!!")
 	}
 
 	// fetch inner uses
@@ -781,19 +788,16 @@ func NewImports(c []byte) Imports {
 		}
 	}
 
-	return Imports{imports: imports, packages: packages, importUses: importUses} 
+	return Imports{imports: imports, pack: pack, importUses: importUses}, nil
 }
 
-func (i*Imports) GetPackage() (string, error) {
-	if len(i.packages) > 0 {
-		return i.packages[0], nil
-	} else {
-		return "", errors.New("No Package")
-	}
+func (i*Imports) GetPackage() string {
+	return i.pack
+
 }
 
 func (i*Imports) IsInPackage(searchedValue string) bool {
-	if len(i.packages) > 0 && i.packages[0] == searchedValue  {
+	if i.pack == searchedValue  {
 		return true
 	}
 	return false
