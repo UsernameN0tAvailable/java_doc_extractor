@@ -1,7 +1,7 @@
 package main
 
 import (
-//	"fmt"
+	//	"fmt"
 	"strings"
 )
 
@@ -18,6 +18,7 @@ type Scope struct {
 	ScopeType string `json:"type"`
 	IsTest bool `json:"isTest"`
 	Tests []string `json:"testClasses"`
+	SubClasses []string `json:"subClasses"`
 }
 
 func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
@@ -117,7 +118,24 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		Methods: make([]Method, 0, 20),
 		imports: *imports,
 		Tests: make([]string, 0, 20),
+		SubClasses: make([]string, 0, 20),
 	} 
+}
+
+func (c*Scope) AppendSubClass(subClass string) {
+
+	isStored := false
+
+	for _, sc := range c.SubClasses {
+		if sc == subClass {
+			isStored = true
+			break
+		}
+	}
+
+	if !isStored {
+		c.SubClasses = append(c.SubClasses, subClass)
+	}
 }
 
 func (c*Scope) Imports(className string) bool {
