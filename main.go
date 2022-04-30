@@ -84,7 +84,6 @@ func (e *Extractor) MatchTests() {
 			}
 		}
 	}
-	//os.Exit(3)
 }
 
 
@@ -126,12 +125,13 @@ func (e *Extractor) SecondaryPackageMatches() {
 			if len(inter) > 0 && len(strings.Split(inter, ".")) == 1 {
 				pack := class.GetPackage()
 
-				for _, superScope := range e.classes {
+				for si, superScope := range e.classes {
 
 					if superScope.IsInterface() && superScope.IsInPackage(pack) {
 						newName := pack + "." + inter 
 						if superScope.GetName() == newName {	
 							e.classes[bi].SetInterface(newName, ii)	
+							e.classes[si].AppendImplementedBy(class.GetName())
 						}
 					} 
 				} 
