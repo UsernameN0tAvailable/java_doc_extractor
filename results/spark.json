@@ -4727,7 +4727,7 @@
 			},
 			{
 				"signature": "@Override\n  public void encode(ChannelHandlerContext ctx, Message in, List\u003cObject\u003e out) throws Exception",
-				"documentation": ""
+				"documentation": "/***\n   * Encodes a Message by invoking its encode() method. For non-data messages, we will add one\n   * ByteBuf to 'out' containing the total frame length, the message type, and the message itself.\n   * In the case of a ChunkFetchSuccess, we will also add the ManagedBuffer corresponding to the\n   * data to 'out', in order to enable zero-copy transfer.\n   */"
 			}
 		],
 		"interfaces": [],
@@ -7028,7 +7028,6 @@
 		"implementedBy": [],
 		"uses": [],
 		"usedBy": [
-			"org.apache.spark.shuffle.sort.UnsafeShuffleWriter",
 			"org.apache.spark.shuffle.sort.UnsafeShuffleWriterSuite"
 		],
 		"isPrivate": false,
@@ -14311,11 +14310,11 @@
 			},
 			{
 				"signature": "private static int optimalNumOfHashFunctions(long n, long m)",
-				"documentation": "/**\n   * Computes the optimal k (number of hashes per item inserted in Bloom filter), given the\n   * expected insertions and total number of bits in the Bloom filter.\n   *\n   * See http:\n   *\n   * @param n expected insertions (must be positive)\n   * @param m total number of bits in Bloom filter (must be positive)\n   */"
+				"documentation": "/**\n   * Computes the optimal k (number of hashes per item inserted in Bloom filter), given the\n   * expected insertions and total number of bits in the Bloom filter.\n   *\n   * See http://en.wikipedia.org/wiki/File:Bloom_filter_fp_probability.svg for the formula.\n   *\n   * @param n expected insertions (must be positive)\n   * @param m total number of bits in Bloom filter (must be positive)\n   */"
 			},
 			{
 				"signature": "private static long optimalNumOfBits(long n, double p)",
-				"documentation": "/**\n   * Computes m (total bits of Bloom filter) which is expected to achieve, for the specified\n   * expected insertions, the required false positive probability.\n   *\n   * See http:\n   *\n   * @param n expected insertions (must be positive)\n   * @param p false positive rate (must be 0 \u003c p \u003c 1)\n   */"
+				"documentation": "/**\n   * Computes m (total bits of Bloom filter) which is expected to achieve, for the specified\n   * expected insertions, the required false positive probability.\n   *\n   * See http://en.wikipedia.org/wiki/Bloom_filter#Probability_of_false_positives for the formula.\n   *\n   * @param n expected insertions (must be positive)\n   * @param p false positive rate (must be 0 \u003c p \u003c 1)\n   */"
 			},
 			{
 				"signature": "public static BloomFilter create(long expectedNumItems)",
@@ -15563,7 +15562,7 @@
 			},
 			{
 				"signature": "public static int nextSetBit(\n      Object baseObject,\n      long baseOffset,\n      int fromIndex,\n      int bitsetSizeInWords)",
-				"documentation": "/**\n   * Returns the index of the first bit that is set to true that occurs on or after the\n   * specified starting index. If no such bit exists then {@code -1} is returned.\n   * \u003cp\u003e\n   * To iterate over the true bits in a BitSet, use the following loop:\n   * \u003cpre\u003e\n   * \u003ccode\u003e\n   *  for (long i = bs.nextSetBit(0, sizeInWords); i \u0026gt;= 0;\n   *    i = bs.nextSetBit(i + 1, sizeInWords)) {\n   *    \n   *  }\n   * \u003c/code\u003e\n   * \u003c/pre\u003e\n   *\n   * @param fromIndex the index to start checking from (inclusive)\n   * @param bitsetSizeInWords the size of the bitset, measured in 8-byte words\n   * @return the index of the next set bit, or -1 if there is no such bit\n   */"
+				"documentation": "/**\n   * Returns the index of the first bit that is set to true that occurs on or after the\n   * specified starting index. If no such bit exists then {@code -1} is returned.\n   * \u003cp\u003e\n   * To iterate over the true bits in a BitSet, use the following loop:\n   * \u003cpre\u003e\n   * \u003ccode\u003e\n   *  for (long i = bs.nextSetBit(0, sizeInWords); i \u0026gt;= 0;\n   *    i = bs.nextSetBit(i + 1, sizeInWords)) {\n   *    // operate on index i here\n   *  }\n   * \u003c/code\u003e\n   * \u003c/pre\u003e\n   *\n   * @param fromIndex the index to start checking from (inclusive)\n   * @param bitsetSizeInWords the size of the bitset, measured in 8-byte words\n   * @return the index of the next set bit, or -1 if there is no such bit\n   */"
 			}
 		],
 		"interfaces": [],
@@ -15914,13 +15913,13 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * A UTF-8 String for internal Spark use.\n * \u003cp\u003e\n * A String encoded in UTF-8 as an Array[Byte], which can be used for comparison,\n * search, see http:\n * \u003cp\u003e\n * Note: This is not designed for general use cases, should not be used outside SQL.\n */",
+		"documentation": "/**\n * A UTF-8 String for internal Spark use.\n * \u003cp\u003e\n * A String encoded in UTF-8 as an Array[Byte], which can be used for comparison,\n * search, see http://en.wikipedia.org/wiki/UTF-8 for details.\n * \u003cp\u003e\n * Note: This is not designed for general use cases, should not be used outside SQL.\n */",
 		"name": "org.apache.spark.unsafe.types.UTF8String",
 		"extends": "",
 		"Methods": [
 			{
 				"signature": "public Object getBaseObject()",
-				"documentation": "/**\n * A UTF-8 String for internal Spark use.\n * \u003cp\u003e\n * A String encoded in UTF-8 as an Array[Byte], which can be used for comparison,\n * search, see http:\n * \u003cp\u003e\n * Note: This is not designed for general use cases, should not be used outside SQL.\n */"
+				"documentation": "/**\n * A UTF-8 String for internal Spark use.\n * \u003cp\u003e\n * A String encoded in UTF-8 as an Array[Byte], which can be used for comparison,\n * search, see http://en.wikipedia.org/wiki/UTF-8 for details.\n * \u003cp\u003e\n * Note: This is not designed for general use cases, should not be used outside SQL.\n */"
 			},
 			{
 				"signature": "public long getBaseOffset()",
@@ -16220,7 +16219,7 @@
 			},
 			{
 				"signature": "public UTF8String soundex()",
-				"documentation": "/**\n   * Encodes a string into a Soundex value. Soundex is an encoding used to relate similar names,\n   * but can also be used as a general purpose scheme to find word with similar phonemes.\n   * https:\n   */"
+				"documentation": "/**\n   * Encodes a string into a Soundex value. Soundex is an encoding used to relate similar names,\n   * but can also be used as a general purpose scheme to find word with similar phonemes.\n   * https://en.wikipedia.org/wiki/Soundex\n   */"
 			},
 			{
 				"signature": "public void writeExternal(ObjectOutput out) throws IOException",
@@ -16877,13 +16876,13 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * Consumes messages from a Amazon Kinesis streams and does wordcount.\n *\n * This example spins up 1 Kinesis Receiver per shard for the given stream.\n * It then starts pulling from the last checkpointed sequence number of the given stream.\n *\n * Usage: JavaKinesisWordCountASL [app-name] [stream-name] [endpoint-url] [region-name]\n *   [app-name] is the name of the consumer app, used to track the read data in DynamoDB\n *   [stream-name] name of the Kinesis stream (i.e. mySparkStream)\n *   [endpoint-url] endpoint of the Kinesis service\n *     (e.g. https:\n *\n *\n * Example:\n *      # export AWS keys if necessary\n *      $ export AWS_ACCESS_KEY_ID=[your-access-key]\n *      $ export AWS_SECRET_ACCESS_KEY=\u003cyour-secret-key\u003e\n *\n *      # run the example\n *      $ SPARK_HOME/bin/run-example   streaming.JavaKinesisWordCountASL myAppName  mySparkStream \\\n *             https:\n *\n * There is a companion helper class called KinesisWordProducerASL which puts dummy data\n * onto the Kinesis stream.\n *\n * This code uses the DefaultAWSCredentialsProviderChain to find credentials\n * in the following order:\n *    Environment Variables - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY\n *    Java System Properties - aws.accessKeyId and aws.secretKey\n *    Credential profiles file - default location (~/.aws/credentials) shared by all AWS SDKs\n *    Instance profile credentials - delivered through the Amazon EC2 metadata service\n * For more information, see\n * https:\n *\n * See https:\n * the Kinesis Spark Streaming integration.\n */",
+		"documentation": "/**\n * Consumes messages from a Amazon Kinesis streams and does wordcount.\n *\n * This example spins up 1 Kinesis Receiver per shard for the given stream.\n * It then starts pulling from the last checkpointed sequence number of the given stream.\n *\n * Usage: JavaKinesisWordCountASL [app-name] [stream-name] [endpoint-url] [region-name]\n *   [app-name] is the name of the consumer app, used to track the read data in DynamoDB\n *   [stream-name] name of the Kinesis stream (i.e. mySparkStream)\n *   [endpoint-url] endpoint of the Kinesis service\n *     (e.g. https://kinesis.us-east-1.amazonaws.com)\n *\n *\n * Example:\n *      # export AWS keys if necessary\n *      $ export AWS_ACCESS_KEY_ID=[your-access-key]\n *      $ export AWS_SECRET_ACCESS_KEY=\u003cyour-secret-key\u003e\n *\n *      # run the example\n *      $ SPARK_HOME/bin/run-example   streaming.JavaKinesisWordCountASL myAppName  mySparkStream \\\n *             https://kinesis.us-east-1.amazonaws.com\n *\n * There is a companion helper class called KinesisWordProducerASL which puts dummy data\n * onto the Kinesis stream.\n *\n * This code uses the DefaultAWSCredentialsProviderChain to find credentials\n * in the following order:\n *    Environment Variables - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY\n *    Java System Properties - aws.accessKeyId and aws.secretKey\n *    Credential profiles file - default location (~/.aws/credentials) shared by all AWS SDKs\n *    Instance profile credentials - delivered through the Amazon EC2 metadata service\n * For more information, see\n * https://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/credentials.html\n *\n * See https://spark.apache.org/docs/latest/streaming-kinesis-integration.html for more details on\n * the Kinesis Spark Streaming integration.\n */",
 		"name": "org.apache.spark.examples.streaming.JavaKinesisWordCountASL",
 		"extends": "",
 		"Methods": [
 			{
 				"signature": "public static void main(String[] args) throws Exception",
-				"documentation": "/**\n * Consumes messages from a Amazon Kinesis streams and does wordcount.\n *\n * This example spins up 1 Kinesis Receiver per shard for the given stream.\n * It then starts pulling from the last checkpointed sequence number of the given stream.\n *\n * Usage: JavaKinesisWordCountASL [app-name] [stream-name] [endpoint-url] [region-name]\n *   [app-name] is the name of the consumer app, used to track the read data in DynamoDB\n *   [stream-name] name of the Kinesis stream (i.e. mySparkStream)\n *   [endpoint-url] endpoint of the Kinesis service\n *     (e.g. https:\n *\n *\n * Example:\n *      # export AWS keys if necessary\n *      $ export AWS_ACCESS_KEY_ID=[your-access-key]\n *      $ export AWS_SECRET_ACCESS_KEY=\u003cyour-secret-key\u003e\n *\n *      # run the example\n *      $ SPARK_HOME/bin/run-example   streaming.JavaKinesisWordCountASL myAppName  mySparkStream \\\n *             https:\n *\n * There is a companion helper class called KinesisWordProducerASL which puts dummy data\n * onto the Kinesis stream.\n *\n * This code uses the DefaultAWSCredentialsProviderChain to find credentials\n * in the following order:\n *    Environment Variables - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY\n *    Java System Properties - aws.accessKeyId and aws.secretKey\n *    Credential profiles file - default location (~/.aws/credentials) shared by all AWS SDKs\n *    Instance profile credentials - delivered through the Amazon EC2 metadata service\n * For more information, see\n * https:\n *\n * See https:\n * the Kinesis Spark Streaming integration.\n */"
+				"documentation": "/**\n * Consumes messages from a Amazon Kinesis streams and does wordcount.\n *\n * This example spins up 1 Kinesis Receiver per shard for the given stream.\n * It then starts pulling from the last checkpointed sequence number of the given stream.\n *\n * Usage: JavaKinesisWordCountASL [app-name] [stream-name] [endpoint-url] [region-name]\n *   [app-name] is the name of the consumer app, used to track the read data in DynamoDB\n *   [stream-name] name of the Kinesis stream (i.e. mySparkStream)\n *   [endpoint-url] endpoint of the Kinesis service\n *     (e.g. https://kinesis.us-east-1.amazonaws.com)\n *\n *\n * Example:\n *      # export AWS keys if necessary\n *      $ export AWS_ACCESS_KEY_ID=[your-access-key]\n *      $ export AWS_SECRET_ACCESS_KEY=\u003cyour-secret-key\u003e\n *\n *      # run the example\n *      $ SPARK_HOME/bin/run-example   streaming.JavaKinesisWordCountASL myAppName  mySparkStream \\\n *             https://kinesis.us-east-1.amazonaws.com\n *\n * There is a companion helper class called KinesisWordProducerASL which puts dummy data\n * onto the Kinesis stream.\n *\n * This code uses the DefaultAWSCredentialsProviderChain to find credentials\n * in the following order:\n *    Environment Variables - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY\n *    Java System Properties - aws.accessKeyId and aws.secretKey\n *    Credential profiles file - default location (~/.aws/credentials) shared by all AWS SDKs\n *    Instance profile credentials - delivered through the Amazon EC2 metadata service\n * For more information, see\n * https://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/credentials.html\n *\n * See https://spark.apache.org/docs/latest/streaming-kinesis-integration.html for more details on\n * the Kinesis Spark Streaming integration.\n */"
 			}
 		],
 		"interfaces": [],
@@ -19099,11 +19098,8 @@
 		"subClasses": [],
 		"implementedBy": [],
 		"uses": [
-			"org.apache.spark.network.util.LimitedInputStream",
 			"org.apache.spark.io.NioBufferedFileInputStream",
-			"org.apache.spark.shuffle.sort.UnsafeShuffleWriter.MyByteArrayOutputStream",
-			"org.apache.spark.shuffle.sort.UnsafeShuffleWriter.StreamFallbackChannelWrapper",
-			"org.apache.spark.storage.TimeTrackingOutputStream"
+			"org.apache.spark.shuffle.sort.UnsafeShuffleWriter.MyByteArrayOutputStream"
 		],
 		"usedBy": [],
 		"isPrivate": false,
@@ -19166,9 +19162,7 @@
 		"subClasses": [],
 		"implementedBy": [],
 		"uses": [],
-		"usedBy": [
-			"org.apache.spark.shuffle.sort.UnsafeShuffleWriter"
-		],
+		"usedBy": [],
 		"isPrivate": true,
 		"InnerClasses": []
 	},
@@ -19599,9 +19593,7 @@
 		"subClasses": [],
 		"implementedBy": [],
 		"uses": [],
-		"usedBy": [
-			"org.apache.spark.shuffle.sort.UnsafeShuffleWriter"
-		],
+		"usedBy": [],
 		"isPrivate": false,
 		"InnerClasses": []
 	},
@@ -19878,7 +19870,7 @@
 			},
 			{
 				"signature": "public boolean append(Object kbase, long koff, int klen, Object vbase, long voff, int vlen)",
-				"documentation": "/**\n     * Append a new value for the key. This method could be called multiple times for a given key.\n     * The return value indicates whether the put succeeded or whether it failed because additional\n     * memory could not be acquired.\n     * \u003cp\u003e\n     * It is only valid to call this method immediately after calling `lookup()` using the same key.\n     * \u003c/p\u003e\n     * \u003cp\u003e\n     * The key and value must be word-aligned (that is, their sizes must be a multiple of 8).\n     * \u003c/p\u003e\n     * \u003cp\u003e\n     * After calling this method, calls to `get[Key|Value]Address()` and `get[Key|Value]Length`\n     * will return information on the data stored by this `append` call.\n     * \u003c/p\u003e\n     * \u003cp\u003e\n     * As an example usage, here's the proper way to store a new key:\n     * \u003c/p\u003e\n     * \u003cpre\u003e\n     *   Location loc = map.lookup(keyBase, keyOffset, keyLength);\n     *   if (!loc.isDefined()) {\n     *     if (!loc.append(keyBase, keyOffset, keyLength, ...)) {\n     *       \n     *     }\n     *   }\n     * \u003c/pre\u003e\n     * \u003cp\u003e\n     * Unspecified behavior if the key is not defined.\n     * \u003c/p\u003e\n     *\n     * @return true if the put() was successful and false if the put() failed because memory could\n     *         not be acquired.\n     */"
+				"documentation": "/**\n     * Append a new value for the key. This method could be called multiple times for a given key.\n     * The return value indicates whether the put succeeded or whether it failed because additional\n     * memory could not be acquired.\n     * \u003cp\u003e\n     * It is only valid to call this method immediately after calling `lookup()` using the same key.\n     * \u003c/p\u003e\n     * \u003cp\u003e\n     * The key and value must be word-aligned (that is, their sizes must be a multiple of 8).\n     * \u003c/p\u003e\n     * \u003cp\u003e\n     * After calling this method, calls to `get[Key|Value]Address()` and `get[Key|Value]Length`\n     * will return information on the data stored by this `append` call.\n     * \u003c/p\u003e\n     * \u003cp\u003e\n     * As an example usage, here's the proper way to store a new key:\n     * \u003c/p\u003e\n     * \u003cpre\u003e\n     *   Location loc = map.lookup(keyBase, keyOffset, keyLength);\n     *   if (!loc.isDefined()) {\n     *     if (!loc.append(keyBase, keyOffset, keyLength, ...)) {\n     *       // handle failure to grow map (by spilling, for example)\n     *     }\n     *   }\n     * \u003c/pre\u003e\n     * \u003cp\u003e\n     * Unspecified behavior if the key is not defined.\n     * \u003c/p\u003e\n     *\n     * @return true if the put() was successful and false if the put() failed because memory could\n     *         not be acquired.\n     */"
 			}
 		],
 		"interfaces": [],
@@ -20074,7 +20066,7 @@
 			},
 			{
 				"signature": "public void sort(Buffer a, int lo, int hi, Comparator\u003c? super K\u003e c)",
-				"documentation": "/**\n   * A stable, adaptive, iterative mergesort that requires far fewer than\n   * n lg(n) comparisons when running on partially sorted arrays, while\n   * offering performance comparable to a traditional mergesort when run\n   * on random arrays.  Like all proper mergesorts, this sort is stable and\n   * runs O(n log n) time (worst case).  In the worst case, this sort requires\n   * temporary storage space for n/2 object references; in the best case,\n   * it requires only a small constant amount of space.\n   *\n   * This implementation was adapted from Tim Peters's list sort for\n   * Python, which is described in detail here:\n   *\n   *   http:\n   *\n   * Tim's C code may be found here:\n   *\n   *   http://svn.python.org/projects/python/trunk/Objects/listobject.c\n   *\n   * The underlying techniques are described in this paper (and may have\n   * even earlier origins):\n   *\n   *  \"Optimistic Sorting and Information Theoretic Complexity\"\n   *  Peter McIlroy\n   *  SODA (Fourth Annual ACM-SIAM Symposium on Discrete Algorithms),\n   *  pp 467-474, Austin, Texas, 25-27 January 1993.\n   *\n   * While the API to this class consists solely of static methods, it is\n   * (privately) instantiable; a TimSort instance holds the state of an ongoing\n   * sort, assuming the input array is large enough to warrant the full-blown\n   * TimSort. Small arrays are sorted in place, using a binary insertion sort.\n   *\n   * @author Josh Bloch\n   */"
+				"documentation": "/**\n   * A stable, adaptive, iterative mergesort that requires far fewer than\n   * n lg(n) comparisons when running on partially sorted arrays, while\n   * offering performance comparable to a traditional mergesort when run\n   * on random arrays.  Like all proper mergesorts, this sort is stable and\n   * runs O(n log n) time (worst case).  In the worst case, this sort requires\n   * temporary storage space for n/2 object references; in the best case,\n   * it requires only a small constant amount of space.\n   *\n   * This implementation was adapted from Tim Peters's list sort for\n   * Python, which is described in detail here:\n   *\n   *   http://svn.python.org/projects/python/trunk/Objects/listsort.txt\n   *\n   * Tim's C code may be found here:\n   *\n   *   http://svn.python.org/projects/python/trunk/Objects/listobject.c\n   *\n   * The underlying techniques are described in this paper (and may have\n   * even earlier origins):\n   *\n   *  \"Optimistic Sorting and Information Theoretic Complexity\"\n   *  Peter McIlroy\n   *  SODA (Fourth Annual ACM-SIAM Symposium on Discrete Algorithms),\n   *  pp 467-474, Austin, Texas, 25-27 January 1993.\n   *\n   * While the API to this class consists solely of static methods, it is\n   * (privately) instantiable; a TimSort instance holds the state of an ongoing\n   * sort, assuming the input array is large enough to warrant the full-blown\n   * TimSort. Small arrays are sorted in place, using a binary insertion sort.\n   *\n   * @author Josh Bloch\n   */"
 			},
 			{
 				"signature": "do",
@@ -20297,7 +20289,7 @@
 		"Methods": [
 			{
 				"signature": "public static long computePrefix(double value)",
-				"documentation": "/**\n     * Converts the double into a value that compares correctly as an unsigned long. For more\n     * details see http:\n     */"
+				"documentation": "/**\n     * Converts the double into a value that compares correctly as an unsigned long. For more\n     * details see http://stereopsis.com/radix.html.\n     */"
 			}
 		],
 		"interfaces": [],
@@ -22523,7 +22515,7 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * This codes generates a int array which fails the standard TimSort.\n *\n * The blog that reported the bug\n * http:\n *\n * This codes was originally wrote by Stijn de Gouw, modified by Evan Yu to adapt to\n * our test suite.\n *\n * https:\n * https:\n */",
+		"documentation": "/**\n * This codes generates a int array which fails the standard TimSort.\n *\n * The blog that reported the bug\n * http://www.envisage-project.eu/timsort-specification-and-verification/\n *\n * This codes was originally wrote by Stijn de Gouw, modified by Evan Yu to adapt to\n * our test suite.\n *\n * https://github.com/abstools/java-timsort-bug\n * https://github.com/abstools/java-timsort-bug/blob/master/LICENSE\n */",
 		"name": "org.apache.spark.util.collection.TestTimSort",
 		"extends": "",
 		"Methods": [
@@ -28250,7 +28242,7 @@
 			},
 			{
 				"signature": "private static String prepareWindowsCommand(List\u003cString\u003e cmd, Map\u003cString, String\u003e childEnv)",
-				"documentation": "/**\n   * Prepare a command line for execution from a Windows batch script.\n   *\n   * The method quotes all arguments so that spaces are handled as expected. Quotes within arguments\n   * are \"double quoted\" (which is batch for escaping a quote). This page has more details about\n   * quoting and other batch script fun stuff: http:\n   */"
+				"documentation": "/**\n   * Prepare a command line for execution from a Windows batch script.\n   *\n   * The method quotes all arguments so that spaces are handled as expected. Quotes within arguments\n   * are \"double quoted\" (which is batch for escaping a quote). This page has more details about\n   * quoting and other batch script fun stuff: http://ss64.com/nt/syntax-esc.html\n   */"
 			},
 			{
 				"signature": "private static List\u003cString\u003e prepareBashCommand(List\u003cString\u003e cmd, Map\u003cString, String\u003e childEnv)",
@@ -31429,7 +31421,7 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * Adapted from https:\n *   jetty-server/src/main/java/org/eclipse/jetty/server/SessionManager.java\n */",
+		"documentation": "/**\n * Adapted from https://github.com/eclipse/jetty.project/blob/jetty-9.3.25.v20180904/\n *   jetty-server/src/main/java/org/eclipse/jetty/server/SessionManager.java\n */",
 		"name": "org.eclipse.jetty.server.SessionManager",
 		"extends": "org.eclipse.jetty.util.component.LifeCycle",
 		"Methods": [],
@@ -31445,13 +31437,13 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * Adapted from https:\n *   jetty-server/src/main/java/org/eclipse/jetty/server/session/SessionHandler.java\n */",
+		"documentation": "/**\n * Adapted from https://github.com/eclipse/jetty.project/blob/jetty-9.3.25.v20180904/\n *   jetty-server/src/main/java/org/eclipse/jetty/server/session/SessionHandler.java\n */",
 		"name": "org.eclipse.jetty.server.session.SessionHandler",
 		"extends": "org.eclipse.jetty.server.handler.ScopedHandler",
 		"Methods": [
 			{
 				"signature": "public SessionHandler()",
-				"documentation": "/**\n * Adapted from https:\n *   jetty-server/src/main/java/org/eclipse/jetty/server/session/SessionHandler.java\n */"
+				"documentation": "/**\n * Adapted from https://github.com/eclipse/jetty.project/blob/jetty-9.3.25.v20180904/\n *   jetty-server/src/main/java/org/eclipse/jetty/server/session/SessionHandler.java\n */"
 			},
 			{
 				"signature": "public SessionHandler(SessionManager manager)",
@@ -32503,13 +32495,13 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * xxHash64. A high quality and fast 64 bit hash code by Yann Colet and Mathias Westerdahl. The\n * class below is modelled like its Murmur3_x86_32 cousin.\n * \u003cp/\u003e\n * This was largely based on the following (original) C and Java implementations:\n * https:\n * https:\n * https:\n */",
+		"documentation": "/**\n * xxHash64. A high quality and fast 64 bit hash code by Yann Colet and Mathias Westerdahl. The\n * class below is modelled like its Murmur3_x86_32 cousin.\n * \u003cp/\u003e\n * This was largely based on the following (original) C and Java implementations:\n * https://github.com/Cyan4973/xxHash/blob/master/xxhash.c\n * https://github.com/OpenHFT/Zero-Allocation-Hashing/blob/master/src/main/java/net/openhft/hashing/XxHash_r39.java\n * https://github.com/airlift/slice/blob/master/src/main/java/io/airlift/slice/XxHash64.java\n */",
 		"name": "org.apache.spark.sql.catalyst.expressions.XXH64",
 		"extends": "",
 		"Methods": [
 			{
 				"signature": "public XXH64(long seed)",
-				"documentation": "/**\n * xxHash64. A high quality and fast 64 bit hash code by Yann Colet and Mathias Westerdahl. The\n * class below is modelled like its Murmur3_x86_32 cousin.\n * \u003cp/\u003e\n * This was largely based on the following (original) C and Java implementations:\n * https:\n * https:\n * https:\n */"
+				"documentation": "/**\n * xxHash64. A high quality and fast 64 bit hash code by Yann Colet and Mathias Westerdahl. The\n * class below is modelled like its Murmur3_x86_32 cousin.\n * \u003cp/\u003e\n * This was largely based on the following (original) C and Java implementations:\n * https://github.com/Cyan4973/xxHash/blob/master/xxhash.c\n * https://github.com/OpenHFT/Zero-Allocation-Hashing/blob/master/src/main/java/net/openhft/hashing/XxHash_r39.java\n * https://github.com/airlift/slice/blob/master/src/main/java/io/airlift/slice/XxHash64.java\n */"
 			},
 			{
 				"signature": "@Override\n  public String toString()",
@@ -38776,7 +38768,7 @@
 		"Methods": [
 			{
 				"signature": "static",
-				"documentation": "/**\n * Test the XXH64 function.\n * \u003cp/\u003e\n * Test constants were taken from the original implementation and the airlift/slice implementation.\n */"
+				"documentation": ""
 			},
 			{
 				"signature": "@Test\n  public void testKnownIntegerInputs()",
@@ -50713,13 +50705,13 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * A Hadoop KeyProvider that lets us test the interaction\n * with the Hadoop code.\n *\n * https:\n *\n * This file intentionally keeps the original file except\n * (1) package name, (2) import order, (3) a few indentation\n */",
+		"documentation": "/**\n * A Hadoop KeyProvider that lets us test the interaction\n * with the Hadoop code.\n *\n * https://github.com/apache/orc/blob/rel/release-1.6.7/java/tools/src/test/org/apache/orc/impl/FakeKeyProvider.java\n *\n * This file intentionally keeps the original file except\n * (1) package name, (2) import order, (3) a few indentation\n */",
 		"name": "test.org.apache.spark.sql.execution.datasources.orc.FakeKeyProvider",
 		"extends": "org.apache.hadoop.crypto.key.KeyProvider",
 		"Methods": [
 			{
 				"signature": "public FakeKeyProvider(Configuration conf)",
-				"documentation": "/**\n * A Hadoop KeyProvider that lets us test the interaction\n * with the Hadoop code.\n *\n * https:\n *\n * This file intentionally keeps the original file except\n * (1) package name, (2) import order, (3) a few indentation\n */"
+				"documentation": "/**\n * A Hadoop KeyProvider that lets us test the interaction\n * with the Hadoop code.\n *\n * https://github.com/apache/orc/blob/rel/release-1.6.7/java/tools/src/test/org/apache/orc/impl/FakeKeyProvider.java\n *\n * This file intentionally keeps the original file except\n * (1) package name, (2) import order, (3) a few indentation\n */"
 			},
 			{
 				"signature": "@Override\n  public KeyVersion getKeyVersion(String name)",
@@ -52508,7 +52500,7 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *   http:\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License. See accompanying LICENSE file.\n */",
+		"documentation": "/**\n * Licensed under the Apache License, Version 2.0 (the \"License\");\n * you may not use this file except in compliance with the License.\n * You may obtain a copy of the License at\n *\n *   http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required by applicable law or agreed to in writing, software\n * distributed under the License is distributed on an \"AS IS\" BASIS,\n * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n * See the License for the specific language governing permissions and\n * limitations under the License. See accompanying LICENSE file.\n */",
 		"name": "org.apache.hive.service.auth.HttpAuthenticationException",
 		"extends": "Exception",
 		"Methods": [
@@ -52818,13 +52810,13 @@
 		"InnerClasses": []
 	},
 	{
-		"documentation": "/**\n * Sun JDK only provides a PLAIN client and no server. This class implements the Plain SASL server\n * conforming to RFC #4616 (http:\n */",
+		"documentation": "/**\n * Sun JDK only provides a PLAIN client and no server. This class implements the Plain SASL server\n * conforming to RFC #4616 (http://www.ietf.org/rfc/rfc4616.txt).\n */",
 		"name": "org.apache.hive.service.auth.PlainSaslServer",
 		"extends": "",
 		"Methods": [
 			{
 				"signature": "PlainSaslServer(CallbackHandler handler, String authMethodStr) throws SaslException",
-				"documentation": "/**\n * Sun JDK only provides a PLAIN client and no server. This class implements the Plain SASL server\n * conforming to RFC #4616 (http:\n */"
+				"documentation": "/**\n * Sun JDK only provides a PLAIN client and no server. This class implements the Plain SASL server\n * conforming to RFC #4616 (http://www.ietf.org/rfc/rfc4616.txt).\n */"
 			},
 			{
 				"signature": "@Override\n  public String getMechanismName()",
@@ -55494,7 +55486,7 @@
 			},
 			{
 				"signature": "public void prepare(QueryState queryState) throws HiveSQLException",
-				"documentation": ""
+				"documentation": "/***\n   * Compile the query and extract metadata\n   * @param queryState\n   * @throws HiveSQLException\n   */"
 			},
 			{
 				"signature": "private void runQuery(HiveConf sqlOperationConf) throws HiveSQLException",
@@ -56622,7 +56614,7 @@
 			},
 			{
 				"signature": "@Override\n  public void run()",
-				"documentation": "/**\n   * Configure Jetty to serve http requests. Example of a client connection URL:\n   * http:\n   * e.g. http:\n   */"
+				"documentation": "/**\n   * Configure Jetty to serve http requests. Example of a client connection URL:\n   * http://localhost:10000/servlets/thrifths2/ A gateway may cause actual target URL to differ,\n   * e.g. http://gateway:port/hive2/servlets/thrifths2/\n   */"
 			},
 			{
 				"signature": "private String getHttpPath(String httpPath)",
