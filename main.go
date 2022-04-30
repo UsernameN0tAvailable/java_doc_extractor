@@ -59,19 +59,6 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
 
-	count := 0
-
-	for _,c := range e.classes {
-		if !c.IsATest() && len(c.Tests) == 0 && len(c.SubClasses) == 0 && len(c.ImplementedBy) == 0 && len(c.UsedBy) == 0 && (c.IsClass() || c.IsInterface()) {
-			//	fmt.Println(c.GetFullPath(), len(c.Uses), c.GetName())
-			count++
-		}
-
-	}
-
-	fmt.Println(count, len(e.classes))
-	panic("")
-
 	return e.classes
 }
 
