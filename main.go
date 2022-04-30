@@ -59,21 +59,15 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
 
-
 	count := 0
 
-
 	for _,c := range e.classes {
-		if c.IsVisible() && !c.IsATest() && len(c.Tests) == 0 && len(c.SubClasses) == 0 && len(c.ImplementedBy) == 0 && len(c.UsedBy) == 0 && (c.IsClass() || c.IsInterface()) {
-			fmt.Println(c.GetFullPath(), len(c.Uses), c.GetName())
+		if !c.IsATest() && len(c.Tests) == 0 && len(c.SubClasses) == 0 && len(c.ImplementedBy) == 0 && len(c.UsedBy) == 0 && (c.IsClass() || c.IsInterface()) {
+		//	fmt.Println(c.GetFullPath(), len(c.Uses), c.GetName())
 			count++
-
 		}
 
 	}
-
-	fmt.Println(count, len(e.classes))
-	panic("")
 
 	return e.classes
 }
@@ -877,20 +871,6 @@ func (i*Imports) IsImported(searchedClass *Scope) bool {
 		}
 	}
 
-	for _, use := range i.importUses {
-		if len(strings.Split(use, searchedValue)) > 1  {
-			return true
-		}
-	}
-
-	for _, m := range searchedClass.GetStaticMethods() {
-		for _,i := range i.imports {
-			if i == m {
-				return true
-			}
-		}
-	}
-
 	return false
 }
 
@@ -899,7 +879,6 @@ func (i*Imports) GetPath(name string) string {
 	spltName := strings.Split(name, ".")
 
 	outPath := make([]string, 0, 100)
-
 
 	for _,imp := range i.imports {
 		spltImport := strings.Split(imp, ".")
