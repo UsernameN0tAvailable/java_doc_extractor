@@ -19,6 +19,7 @@ type Scope struct {
 	IsTest bool `json:"isTest"`
 	Tests []string `json:"testClasses"`
 	SubClasses []string `json:"subClasses"`
+	ImplementedBy []string `json:"implementedBy"`
 }
 
 func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
@@ -119,7 +120,26 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		imports: *imports,
 		Tests: make([]string, 0, 20),
 		SubClasses: make([]string, 0, 20),
+		ImplementedBy: make([]string, 0, 20),
 	} 
+}
+
+
+func (c*Scope) AppendImplementedBy(inter string) {
+
+	isStored := false
+
+	for _, i := range c.ImplementedBy {
+		if inter == i {
+			isStored = true
+			break
+		}
+	}
+
+	if !isStored {
+		c.ImplementedBy = append(c.ImplementedBy, inter)
+	}
+
 }
 
 func (c*Scope) AppendSubClass(subClass string) {
