@@ -106,13 +106,13 @@ func (e *Extractor) SecondaryPackageMatches() {
 					newName := pack + "." + super
 					if superScope.GetName() == newName {	
 						e.classes[bi].SetSuper(newName)	
+						e.classes[si].AppendSubClass(class.GetName())
 					} else if lastExt == super {
 						e.classes[bi].SetSuper(superScope.GetName())
+						e.classes[si].AppendSubClass(class.GetName())
 					}
 				} 
-
 			} 
-
 		}
 	}
 
@@ -133,11 +133,8 @@ func (e *Extractor) SecondaryPackageMatches() {
 						if superScope.GetName() == newName {	
 							e.classes[bi].SetInterface(newName, ii)	
 						}
-
 					} 
-
 				} 
-
 			}
 		}
 	}
