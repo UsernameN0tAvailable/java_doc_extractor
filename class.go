@@ -218,8 +218,15 @@ func (c *Scope) UsesClass(class *Scope) bool {
 	className := class.GetName()
 
 	for _, u := range c.tmpUses {
+
 		if u == className {
 			return true
+		}else {
+			for _, m := range class.GetStaticMethods() {
+				if u == m {
+					return true
+				}
+			}
 		}
 	}
 
