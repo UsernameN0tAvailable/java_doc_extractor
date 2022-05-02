@@ -11,22 +11,6 @@ import (
 )
 
 
-const (
-	scopeOn = byte('{')
-	scopeOff = byte('}')
-	slash = byte('/')
-	backSlash = byte('\\')
-	star = byte('*')
-	str = byte('"')
-	char = byte('\'')
-	newLine = byte('\n') // only works on unix systems
-	tab = byte('\t')
-	at = byte('@') 
-	semiColumn = byte(';')
-	roundOpen = byte('(')
-	roundClose = byte(')')
-)
-
 var tot int = 0
 
 var basePath string 
@@ -78,6 +62,7 @@ func (e *Extractor) MatchUsages() {
 				} else {
 					e.classes[ci].AppendUsedBy(usedByClass.GetName())
 				}
+
 				e.classes[ui].AppendUses(class.GetName())
 			}
 		} 
@@ -329,17 +314,9 @@ func (e* Extractor) parseJavaFile(filePath string) {
 
 func (e* Extractor) parseFile(content []byte, path string) {
 
-	inComment := false
-	inInlineComment := false
-	inDocumentation := false
-	inString := false
-	inChar := false
-	escape := false
-	paramsScope := 0
 
 	start := 0
 	lastElementEnd := 0
-	scopeCount := 0
 
 	scopeStarts := make([]int, 0, 100)
 
@@ -351,48 +328,28 @@ func (e* Extractor) parseFile(content []byte, path string) {
 		return
 	}
 
-	//fmt.Println(string(content))
+	parser := NewParser()
 
-	for i, c := range content {
+	for i, _ := range content {
 
+		nextIndex := i + 1
+		event := parser.Parse(content, i)
 
-		//printLine(content, i)
-		//fmt.Println(inComment, inString, inChar, paramsScope, scopeCount)
+		switch event {
+		case EnterDocumentation:
+			start = i
+		case EnterComment:
+			start = i
+		case LeaveDocumentation:
+			doc = string(content[start:nextIndex])
+			lastElementEnd = i
+		case LeaveMultilineComment: 
+			doc = ""
+			lastElementEnd = i
+		case EnterScope:
 
-		if c == slash && !inString && !inChar {
-			nextIndex := i + 1
-			prevIndex := i - 1
-			if !inComment && nextIndex < len(content) && star == content[nextIndex] {
-				inComment = true
-				nextNextIndex := nextIndex + 1
-				inDocumentation = nextNextIndex < len(content) && star == content[nextNextIndex]
-				start = i
-			} else if !inComment && !inInlineComment && nextIndex < len(content) && slash == content[nextIndex] {
-				inComment = true
-				inInlineComment = true
-				start = i
-			} else if inComment && !inInlineComment && prevIndex >= 0 && content[prevIndex] == star {
-
-				if inDocumentation {
-					doc = string(content[start:nextIndex])
-					inDocumentation = false
-				} else if inComment {
-					doc = ""
-				}
-				inComment = false
-				lastElementEnd = i
-			}
-
-		} else if c == scopeOn && !inComment && !inString && !inChar && paramsScope == 0 {
-
-			var signature string
-			if scopeCount == 0 {
-				signature = string(findFirstSignature(i, content, lastElementEnd))	
-			} else {
-				signature = findSignature(i, content, lastElementEnd + 1)
-			}
-
-
+			signature := findSignature(i, content, lastElementEnd + 1) 	
+	
 			sigArr := make([]string, 0, 10)
 
 			for _,s := range strings.Split(signature, "\n") {
@@ -401,11 +358,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				}
 			}
 
-			signature = strings.Join(sigArr, "\n")
-
-			scopeCount++
 			isContainerScope := false
-
 			if isValidSignature(signature) {	
 				isContainerScope = e.storeSignature(signature, doc, path, &imports) 		
 			} 
@@ -426,8 +379,8 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			scopeStarts = append(scopeStarts, i)
 			lastElementEnd = i
 
-		} else if c == scopeOff && !inComment && !inString && !inChar && paramsScope == 0 {
-			scopeCount--
+		case LeaveScope:
+
 			lastElementEnd = i
 			doc = ""
 
@@ -459,24 +412,9 @@ func (e* Extractor) parseFile(content []byte, path string) {
 				//fmt.Println(active.GetName(), scopeCount, len(e.activeScopes), e.activeScopes[0] == nil)
 			} else {
 				e.activeScope = nil
-			}	
+			}
+		default:
 
-		} else if c == str && !inChar && !inComment && !escape {
-			inString = !inString
-		} else if c == newLine && inInlineComment && !inString {
-			inComment = false
-			inInlineComment = false
-			lastElementEnd = i
-		} else if c == char && !inString && !inComment && !escape {
-			inChar = !inChar
-		} else if c == backSlash && !escape && (inString || inChar) {
-			escape = true
-		} else if escape && (inString || inChar) {
-			escape = false
-		} else if c == roundOpen && !inString && !inChar && !inComment  {
-			paramsScope ++
-		} else if c == roundClose && !inString && !inChar && !inComment {
-			paramsScope--
 		}
 	}
 }
@@ -496,66 +434,35 @@ func printLine(content []byte, index int) {
 
 func removeComment(v []byte) []byte {
 
-
-	isMultiline := false
-	inDocumentation := false
-	isSingleLine := false
-	inString := false
-	inChar := false
-	isEscape := false
-	isJson := false
-
-	l := len(v)
-
 	start := 0
 
-	for i,b := range v  {
+	parser := NewParser()
 
+	for i,_ := range v  {
 
 		nextIndex := i + 1
-		if b == byte('"') && len(v) > nextIndex + 1 && v[nextIndex] == byte('"') && v[nextIndex + 1] == byte('"') && !isEscape && !inChar && !inString && !isJson {
-			isJson = true
+
+		switch parser.Parse(v, i) {
+		case EnterJson:
 			start = i
-		} else if b == byte('"') && isJson && len(v) > nextIndex + 1 && v[nextIndex] == byte('"') && v[nextIndex + 1] == byte('"') && !isEscape && !inChar && !inString {
+		case LeaveJson:
 			firstChunk := string(v[:start])
 			endChunk := string(v[nextIndex+2:])
 			return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
-
-		} else if b == slash && !inString && !inChar && !isJson && !inDocumentation {
-
-			if !inDocumentation && !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == star && len(v) > nextIndex + 1 && v[nextIndex+1] == star  {
-				inDocumentation = true
-
-
-			} else if !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == star && (!(len(v) > nextIndex + 1 && v[nextIndex+1] == star) || (len(v) > nextIndex + 2 && v[nextIndex+1] == star && v[nextIndex + 2] == star)){
-				isMultiline = true
-				start = i
-			} else if !isMultiline && !isSingleLine && l > nextIndex && v[nextIndex] == slash {
-				isSingleLine = true
-				start = i
-			}
-		} else if b == star && !inString && !inChar && !isJson && !inDocumentation {
-			if isMultiline && l > nextIndex && v[nextIndex] == slash {
+		case EnterMultilineComment:
+			start = i
+		case LeaveMultilineComment:
 				firstChunk := string(v[:start])
 				endChunk := string(v[nextIndex+1:])
 				return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
-			} else if inDocumentation && l > nextIndex && v[nextIndex] == slash {
-				inDocumentation = false
-			}
-		} else if b == newLine && isSingleLine && !inChar && !inString && !isJson && !inDocumentation {
+		case EnterComment:
+				start = i
+		case LeaveInlineComment:
 			firstChunk := string(v[:start])
 			endChunk := string(v[i:])
 			return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
-		} else if b == byte('"') && !isMultiline && !isSingleLine && !inChar && !isEscape && !isJson && !inDocumentation {
-			inString = !inString
-		} else if b == byte('\'') && !isMultiline && !isSingleLine && !inString && !isEscape && !isJson && !inDocumentation {
-			inChar = !inChar
-		} else if b == backSlash && (inString || inChar) && !isEscape && !isJson && !inDocumentation {
-			isEscape = true
-		} else if (inString || inChar) && isEscape {
-			isEscape = false
-		}
 
+		}
 	}
 
 	return v
@@ -567,18 +474,21 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	isContainerScope := false
 	fields := strings.Fields(s)
 
-	paramsOpen := false
+	paramsScope := 0
 
 	for _, f := range fields {
 		fT := strings.TrimSpace(f)
 
-		if !paramsOpen && contains(fT, roundOpen) {
-			paramsOpen = true
-		} else if paramsOpen && contains(fT, roundClose) {
-			paramsOpen = false
+		for _, c := range f {
+			if byte(c) == roundOpen {
+				paramsScope++
+			} else if byte(c) == roundClose {
+				paramsScope--
+			}
+
 		}
 
-		if !paramsOpen && ( fT == "class" || fT == "enum" || fT == "record" || fT == "interface" || fT == "@interface") {
+		if paramsScope == 0 && ( fT == "class" || fT == "enum" || fT == "record" || fT == "interface" || fT == "@interface") {
 			isContainerScope = true
 			break 
 		}
@@ -605,6 +515,8 @@ func contains(stack string, hay byte) bool {
 }
 
 func isValidSignature(s string) bool {
+
+	s = string(removeComment([]byte(s)))
 
 	trimmed := strings.TrimSpace(s)
 
@@ -634,7 +546,7 @@ func isValidSignature(s string) bool {
 }
 
 func isValidSignatureKeyWord(predicate string) bool {
-	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized" && predicate != "="
+	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized"  
 }
 
 
@@ -864,6 +776,10 @@ func (i*Imports) IsInPackage(searchedValue string) bool {
 }
 
 func (i*Imports) IsImported(searchedClass *Scope) bool {
+
+	if searchedClass.GetPackage() == i.pack {
+		return true
+	}
 
 	searchedValue := searchedClass.GetName()
 	if i.IsInPackage(searchedValue) {
