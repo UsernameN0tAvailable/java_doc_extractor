@@ -138,7 +138,9 @@ func main() {
 
 	classes := extractor.Extract(os.Args[1])
 
-	jsonOut, err := json.MarshalIndent(classes, "", "\t")
+	jsonResult := NewJsonResult(classes)
+
+	jsonOut, err := json.MarshalIndent(jsonResult, "", "\t")
 
 	if err == nil {
 		fmt.Println(string(jsonOut))
