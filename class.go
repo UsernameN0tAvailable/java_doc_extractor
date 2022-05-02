@@ -33,6 +33,7 @@ func (s*Scope) IsInterface() bool {return s.ScopeType == "interface"}
 func (s*Scope) IsEnum() bool {return s.ScopeType == "enum"}
 func (s*Scope) IsRecord() bool {return s.ScopeType == "record"}
 func (s*Scope) IsATest() bool {return s.IsTest}
+func (s*Scope) IsAnnotation() bool {return s.ScopeType == "annotation"}
 
 func NewScope(fullPath string, signature string, doc string, imports *Imports, scope *Scope) Scope {
 
@@ -162,6 +163,10 @@ func findAnnotations(content string, imports *Imports) []string {
 
 	return annotations
 }
+
+
+func (s *Scope) HasSuper() bool {return len(s.Super) > 0}
+func (s *Scope) HasChildren() bool {return len(s.SubClasses) > 0}
 
 func (s *Scope) AddInnerClass(class string) {
 	s.InnerClasses = append(s.InnerClasses, class)
