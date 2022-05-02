@@ -1,6 +1,7 @@
 package main
 
 import (
+//	"fmt"
 	"strings"
 )
 
@@ -43,13 +44,17 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 	staticIndex := -1
 	scopeType := "" 
 	visible := false
+
 	for i, p := range fields {
 		if p == "class" {
 			classIndex = i
 			scopeType = "class"
-		} else if p == "interface" || p == "@interface" {
+		} else if p == "interface" {
 			classIndex = i
 			scopeType = "interface"
+		} else if p == "@interface" {
+			classIndex = i
+			scopeType = "annotation"
 		} else if p == "enum" {
 			classIndex = i
 			scopeType = "enum"
@@ -110,6 +115,8 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 
 	isTest := strings.Contains(className, ".test.") || strings.Contains(className, "Test") || strings.Contains(className, "Benchmark")
 
+	annotations := findAnnotations(signature, imports)
+
 	return Scope{
 		IsTest: isTest,
 		ScopeType: scopeType,
@@ -125,7 +132,7 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		Tests: make([]string, 0, 20),
 		SubClasses: make([]string, 0, 20),
 		ImplementedBy: make([]string, 0, 20),
-		tmpUses: make([]string, 0, 20),
+		tmpUses: annotations,
 		Uses: make([]string, 0, 20),
 		UsedBy: make([]string, 0, 20),
 		IsPrivate: !visible,
@@ -134,13 +141,36 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 	} 
 }
 
+func findAnnotations(content string, imports *Imports) []string {
+
+	annotations := make([]string, 0, 10)
+	signatureLines := strings.Split(content, "\n")
+	for _, a := range signatureLines {
+		v := strings.TrimSpace(a)
+		if  len(v) > 0 && v[0] == byte('@') {
+			v = strings.Split(v[1:], "(")[0]	
+
+			found := imports.GetPath(v)
+
+			if len(strings.Split(found, ".")) == 1 {
+				found = imports.GetPackage() + "." + found
+			}
+
+			annotations = append(annotations,  found)
+		}
+	}
+
+	return annotations
+}
+
 func (s *Scope) AddInnerClass(class string) {
 	s.InnerClasses = append(s.InnerClasses, class)
 	s.imports.imports = append(s.imports.imports, class)
 }
 
 func (s *Scope) AddBody(body string, imports *Imports) {
-	s.tmpUses = imports.SearchUses(body, s.InnerClasses)
+	s.tmpUses = append(s.tmpUses, findAnnotations(body, imports)...)
+	s.tmpUses = append(s.tmpUses, imports.SearchUses(body, s.InnerClasses)...)
 }
 
 func (s *Scope) IsVisible() bool {
@@ -304,6 +334,8 @@ func (c* Scope) SetInterface(v string, index int) {
 //public to tst helper
 func RemoveTemplate(name string) string {
 
+	content := []byte(name)
+
 	start := 0
 	end := len(name) 
 
@@ -311,37 +343,28 @@ func RemoveTemplate(name string) string {
 
 	result := ""
 
-	inString := false
-	inChar := false
+	parser := NewParser()
 
-	for i, s := range name {
+	for i, _ := range name {
 
-		if string(s) == "\"" {
-			inString = !inString
-		}
-
-		if string(s) == "'" {
-			inChar = !inChar
-		}
-
-		if string(s) == "<" && (len(name) > i + 1 && name[i+ 1] != byte('=')) && !inString && !inChar {
+		switch parser.Parse(content, i) {
+		case EnterTemplate:
 			count++
 			if count == 1 {
 				end = i 
 			}
-		} else if string(s) == ">" && ((len(name) > i + 1 && name[i+1] != byte('=') && !inString && !inChar) || len(name) == i + 1) {
+		case LeaveTemplate:
 			count--
-
 			if count == 0 {
 				result += name[start:end]
 				start = i + 1
 				end = len(name) 
 			}
+
 		} 
 	}
 
 	result += name[start:end]
-
 	return result
 }
 
