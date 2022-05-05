@@ -174,6 +174,7 @@ func (s *Scope) AddInnerClass(class string) {
 }
 
 func (s *Scope) AddBody(body string, imports *Imports) {
+	s.body = body
 	s.tmpUses = append(s.tmpUses, findAnnotations(body, imports)...)
 	s.tmpUses = append(s.tmpUses, imports.SearchUses(body, s.InnerClasses)...)
 }
