@@ -1,7 +1,7 @@
 package main
 
 import (
-//	"fmt"
+	//	"fmt"
 	"strings"
 )
 
@@ -266,7 +266,7 @@ func (c *Scope) UsesClass(class *Scope) bool {
 		}
 	}
 
-	return false
+	return c.imports.IsEntityImported(className, c.body)
 }
 
 func (c*Scope) IsInPackage(packSearched string) bool {

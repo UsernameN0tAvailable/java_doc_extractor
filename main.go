@@ -43,9 +43,9 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	e.listDirs(root, &wg)
 
 	wg.Wait()
-
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
+
 
 	return e.classes
 }
@@ -56,21 +56,39 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 */
 func (e *Extractor) MatchUsages() {
 
+	var wg sync.WaitGroup
+
 	for ci, class := range e.classes {
-
 		for ui, usedByClass := range e.classes {
-			if usedByClass.GetName() != class.GetName() && usedByClass.UsesClass(&class) {
-				// match tests and benchmarks
-				if !class.IsATest() && usedByClass.IsATest() {	
-					e.classes[ci].AppendTestCase(usedByClass.GetName())
-				} else {
-					e.classes[ci].AppendUsedBy(usedByClass.GetName())
-				}
-
-				e.classes[ui].AppendUses(class.GetName())
-			}
+			wg.Add(1)
+			go e.ClassUsesClass(&class, &usedByClass, ci, ui, &wg)
 		} 
 	}
+
+	wg.Wait()
+
+	//panic("done")
+}
+
+func (e*Extractor) ClassUsesClass(class *Scope, usedByClass *Scope, ci int, ui int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if usedByClass.GetName() != class.GetName() && usedByClass.UsesClass(class) {
+
+		e.mu.Lock()	
+		defer e.mu.Unlock()
+
+		// match tests and benchmarks
+		if !class.IsATest() && usedByClass.IsATest() {	
+	
+			e.classes[ci].AppendTestCase(usedByClass.GetName())
+		} else {
+
+			e.classes[ci].AppendUsedBy(usedByClass.GetName())
+		}
+
+		e.classes[ui].AppendUses(class.GetName())
+	}
+
 }
 
 
@@ -291,16 +309,17 @@ func (e *Extractor) listDirs(root string, wg *sync.WaitGroup) {
 	if err != nil {
 		fmt.Println(err)
 		wg.Add(1)
-		e.parseJavaFile(root)
+		go e.parseJavaFile(root, wg)
 		return
 	}
-	
+
 
 	for fileIndex := range files {
 		file := files[fileIndex]
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
-			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
+			wg.Add(1)
+			go e.parseJavaFile(root + string(os.PathSeparator) + file.Name(), wg)
 		} else if file.IsDir()  {
 			wg.Add(1)
 			go e.listDirs(root + string(os.PathSeparator) + file.Name(), wg)
@@ -308,7 +327,8 @@ func (e *Extractor) listDirs(root string, wg *sync.WaitGroup) {
 	}
 }
 
-func (e* Extractor) parseJavaFile(filePath string) {
+func (e* Extractor) parseJavaFile(filePath string, wg *sync.WaitGroup) {
+	defer wg.Done()
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -357,13 +377,13 @@ func (e* Extractor) parseFile(content []byte, path string) {
 		case LeaveDocumentation:
 			doc = string(content[start:nextIndex])
 			lastElementEnd = i
-		case LeaveMultilineComment: 
+			case LeaveMultilineComment: 
 			doc = ""
 			lastElementEnd = i
 		case EnterScope:
 
 			signature := findSignature(i, content, lastElementEnd + 1) 	
-	
+
 			sigArr := make([]string, 0, 10)
 
 			for _,s := range strings.Split(signature, "\n") {
@@ -466,11 +486,11 @@ func removeComment(v []byte) []byte {
 		case EnterMultilineComment:
 			start = i
 		case LeaveMultilineComment:
-				firstChunk := string(v[:start])
-				endChunk := string(v[nextIndex+1:])
-				return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+			firstChunk := string(v[:start])
+			endChunk := string(v[nextIndex+1:])
+			return removeComment([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
 		case EnterComment:
-				start = i
+			start = i
 		case LeaveInlineComment:
 			firstChunk := string(v[:start])
 			endChunk := string(v[i:])
@@ -710,75 +730,99 @@ func (i *Imports) SearchUses(b string, innerClasses []string) [] string {
 		i.imports = append(i.imports, icName)
 	}
 
+	return i.GetImportedEntities(body)
+}
+
+func (i* Imports) GetImportedEntities(body string) []string {
+
 	importUses := make([]string, 0, len(i.imports) * 4)
 
 	for _, imp := range i.imports {
 
-		importSplit := strings.Split(imp, ".")
-		ending :=  importSplit[len(importSplit) - 1]
-
-		contentSplit := strings.Split(body, " " + ending + ".")
-
-		if len(contentSplit) > 1 {
-			for i := 1; i < len(contentSplit); i += 2 {
-				chunk := contentSplit[i]
-				if len(chunk) > 1 {	
-					roundSplit := strings.Split(chunk, "(")	
-
-					if len(roundSplit) < 2 {
-						roundSplit = strings.Split(chunk, ")")
-					}
-
-					if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
-
-						token := ""
-
-						splt := strings.Fields(roundSplit[0])
-
-						if len(splt) > 0 {
-							token = splt[0]
-						}
-
-						token = strings.Split(token, ",")[0]
-						token = strings.Split(token, ";")[0]
-						token = strings.Split(token, "\"")[0]
-						token = strings.Split(token, "..")[0]
-						token = strings.Split(token, "*/")[0]
-						token = strings.Split(token, "*")[0]
-						token = strings.TrimSpace(token)
-
-						if len(token) > 0 {
-							importUses = append(importUses, RemoveTemplate(imp + "." + token))
-						}
-					}	
-				}
-			}
-		} else {
-
-			// in case it is a static function
-			contentSplit := strings.Split(body, " " + ending + "(")
-
-			if len(contentSplit) > 1 {
-				for i := 1; i < len(contentSplit); i += 2 {
-					chunk := contentSplit[i]
-					if len(chunk) > 1 {	
-						roundSplit := strings.Split(chunk, "(")	
-
-						if len(roundSplit) < 2 {
-							roundSplit = strings.Split(chunk, ")")
-						}
-
-						if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {		
-							importUses = append(importUses, RemoveTemplate(imp))	
-						}	
-					}
-				}
-			}
-		}
+		if i.IsEntityImported(imp, body) || i.IsStaticEntityImported(imp, body) {
+			importUses = append(importUses, RemoveTemplate(imp))
+		}		
 	}
 
 	return importUses
 }
+
+
+func (i*Imports) IsEntityImported(entity string, body string) bool {
+
+	importSplit := strings.Split(entity, ".")
+	ending :=  importSplit[len(importSplit) - 1]
+
+	contentSplit := strings.Split(body, ending + " ")
+
+	if len(contentSplit) == 1 {
+		contentSplit = strings.Split(body, ending + "(") 
+	}
+
+	if len(contentSplit) == 1 {
+		contentSplit = strings.Split(body, ending + ".") 
+	}
+
+	if len(contentSplit) > 1 {
+		for i := 1; i < len(contentSplit); i += 2 {
+			chunk := contentSplit[i]
+			if len(chunk) > 1 {	
+				roundSplit := strings.Split(chunk, "(")	
+
+				if len(roundSplit) < 2 {
+					roundSplit = strings.Split(chunk, ")")
+				}
+
+				if len(roundSplit) > 1 && len(roundSplit[0]) > 0 {	
+
+					token := ""
+
+					splt := strings.Fields(roundSplit[0])
+
+					if len(splt) > 0 {
+						token = splt[0]
+					}
+
+					token = strings.Split(token, ",")[0]
+					token = strings.Split(token, ";")[0]
+					token = strings.Split(token, "\"")[0]
+					token = strings.Split(token, "..")[0]
+					token = strings.Split(token, "*/")[0]
+					token = strings.Split(token, "*")[0]
+					token = strings.TrimSpace(token)
+
+					return len(token) > 0
+				}	
+			}
+		}
+	}
+	return false
+}
+
+
+func (i*Imports) IsStaticEntityImported(entity string, body string) bool {
+
+	// in case it is a static function
+	contentSplit := strings.Split(body, " " + entity + "(")
+
+	if len(contentSplit) > 1 {
+		for i := 1; i < len(contentSplit); i += 2 {
+			chunk := contentSplit[i]
+			if len(chunk) > 1 {	
+				roundSplit := strings.Split(chunk, "(")	
+
+				if len(roundSplit) < 2 {
+					roundSplit = strings.Split(chunk, ")")
+				}
+
+				return len(roundSplit) > 1 && len(roundSplit[0]) > 0 		
+			}
+		}
+	}
+	return false
+}
+
+
 
 func (i*Imports) GetPackage() string {
 	return i.pack
