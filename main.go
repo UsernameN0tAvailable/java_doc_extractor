@@ -1,13 +1,14 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"encoding/json"
-	"errors"
+	"sync"
 )
 
 
@@ -16,9 +17,8 @@ var tot int = 0
 var basePath string 
 
 type Extractor struct {
+	mu sync.Mutex
 	classes []Scope
-	activeScopes []*Scope
-	activeScope *Scope 
 }
 
 func (e*Extractor) GetScopees() []Scope {
@@ -38,7 +38,11 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 		panic("no file")	
 	}
 
-	e.listDirs(root)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	e.listDirs(root, &wg)
+
+	wg.Wait()
 
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
@@ -151,7 +155,7 @@ func main() {
 }
 
 func NewExtractor() Extractor {
-	return Extractor{classes: make([]Scope, 0, 20000), activeScopes: make([]*Scope, 0, 200), activeScope: nil}
+	return Extractor{classes: make([]Scope, 0, 20000)}
 }
 
 
@@ -279,22 +283,27 @@ func inProject(path string,projectName string) bool {
 
 
 
-func (e *Extractor) listDirs(root string) {
+func (e *Extractor) listDirs(root string, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	files, err := ioutil.ReadDir(root)
 
 	if err != nil {
 		fmt.Println(err)
+		wg.Add(1)
 		e.parseJavaFile(root)
 		return
 	}
+	
+
 	for fileIndex := range files {
 		file := files[fileIndex]
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
 			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
 		} else if file.IsDir()  {
-			e.listDirs(root + string(os.PathSeparator) + file.Name())
+			wg.Add(1)
+			go e.listDirs(root + string(os.PathSeparator) + file.Name(), wg)
 		}
 	}
 }
@@ -315,6 +324,9 @@ func (e* Extractor) parseJavaFile(filePath string) {
 }
 
 func (e* Extractor) parseFile(content []byte, path string) {
+
+	activeScopes := make([]*Scope, 0, 100)
+	var activeScope *Scope 
 
 
 	start := 0
@@ -362,20 +374,20 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			isContainerScope := false
 			if isValidSignature(signature) {	
-				isContainerScope = e.storeSignature(signature, doc, path, &imports) 		
+				isContainerScope = e.storeSignature(signature, doc, path, &imports, activeScope) 		
 			} 
 
 			if isContainerScope {
 				active := &e.classes[len(e.classes) - 1]
 
-				if e.activeScope != nil {
-					e.activeScope.AddInnerClass(active.GetName())
+				if activeScope != nil {
+					activeScope.AddInnerClass(active.GetName())
 				}
 
-				e.activeScopes = append(e.activeScopes, active)
-				e.activeScope = active
+				activeScopes = append(activeScopes, active)
+				activeScope = active
 			}  else {
-				e.activeScopes = append(e.activeScopes, nil)
+				activeScopes = append(activeScopes, nil)
 			} 
 
 			scopeStarts = append(scopeStarts, i)
@@ -388,32 +400,32 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			body := content[scopeStarts[len(scopeStarts) - 1]:i]
 
-			if len(e.activeScopes) > 0 && e.activeScopes[len(e.activeScopes) - 1] != nil {
-				e.activeScopes[len(e.activeScopes) - 1].AddBody(RemoveTemplate(string(removeComment(body))), &imports)
+			if len(activeScopes) > 0 && activeScopes[len(activeScopes) - 1] != nil {
+				activeScopes[len(activeScopes) - 1].AddBody(RemoveTemplate(string(removeComment(body))), &imports)
 			} 
 
 			scopeStarts = scopeStarts[:len(scopeStarts) - 1]
-			e.activeScopes = e.activeScopes[:(len(e.activeScopes) - 1)]
-			if len(e.activeScopes) > 0 {
-				e.activeScope = e.activeScopes[len(e.activeScopes) - 1]
-				active := e.activeScopes[len(e.activeScopes) - 1]
+			activeScopes = activeScopes[:(len(activeScopes) - 1)]
+			if len(activeScopes) > 0 {
+				activeScope = activeScopes[len(activeScopes) - 1]
+				active := activeScopes[len(activeScopes) - 1]
 
 				if active == nil {
 					// find last used class
 					// because inner class could be inside
 					// of method
-					for i := len(e.activeScopes) - 1; i >= 0; i -- {
-						if e.activeScopes[i] != nil {
-							active = e.activeScopes[i]
+					for i := len(activeScopes) - 1; i >= 0; i -- {
+						if activeScopes[i] != nil {
+							active = activeScopes[i]
 							break
 						}
 					}
 
-					e.activeScope = active
+					activeScope = active
 				}
 				//fmt.Println(active.GetName(), scopeCount, len(e.activeScopes), e.activeScopes[0] == nil)
 			} else {
-				e.activeScope = nil
+				activeScope = nil
 			}
 		default:
 
@@ -471,7 +483,7 @@ func removeComment(v []byte) []byte {
 }
 
 
-func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports) bool {
+func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports, activeScope *Scope) bool {
 
 	isContainerScope := false
 	fields := strings.Fields(s)
@@ -497,9 +509,11 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 	}
 
 	if isContainerScope {
-		e.classes = append(e.classes, NewScope(path, s, doc, imports, e.activeScope))	
-	} else if e.activeScope != nil {
-		e.activeScope.AppendMethod(NewMethod(s, doc))
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		e.classes = append(e.classes, NewScope(path, s, doc, imports, activeScope))	
+	} else if activeScope != nil {
+		activeScope.AppendMethod(NewMethod(s, doc))
 	}
 
 	return isContainerScope 
