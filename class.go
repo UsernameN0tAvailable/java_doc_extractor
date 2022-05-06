@@ -174,9 +174,25 @@ func (s *Scope) AddInnerClass(class string) {
 }
 
 func (s *Scope) AddBody(body string, imports *Imports) {
-	s.body = body
+	s.body = s.removeInnerClassesDeclarations(body)
 	s.tmpUses = append(s.tmpUses, findAnnotations(body, imports)...)
-	s.tmpUses = append(s.tmpUses, imports.SearchUses(body, s.InnerClasses)...)
+}
+
+/* So that they dont appear in use */
+func (s *Scope) removeInnerClassesDeclarations(body string) string {
+
+	for _, icName := range s.InnerClasses {
+
+		icSplit := strings.Split(icName, ".")
+		ic := icSplit[len(icSplit) - 1]
+
+		body = strings.Join(strings.Split(body, "inteface " + ic), "")
+		body = strings.Join(strings.Split(body, "class " + ic), "")
+		body = strings.Join(strings.Split(body, "enum " + ic), "")
+		body = strings.Join(strings.Split(body, "record " + ic), "")
+	}
+
+	return body
 }
 
 func (s *Scope) IsVisible() bool {
@@ -266,7 +282,7 @@ func (c *Scope) UsesClass(class *Scope) bool {
 		}
 	}
 
-	return c.imports.IsEntityImported(className, c.body)
+	return c.imports.IsClassUsed(class, c.body)
 }
 
 func (c*Scope) IsInPackage(packSearched string) bool {
