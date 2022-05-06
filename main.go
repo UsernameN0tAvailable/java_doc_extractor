@@ -38,11 +38,8 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 		panic("no file")	
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	e.listDirs(root, &wg)
+	e.listDirs(root)
 
-	wg.Wait()
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
 
@@ -61,7 +58,7 @@ func (e *Extractor) MatchUsages() {
 	for ci, class := range e.classes {
 		for ui, usedByClass := range e.classes {
 			wg.Add(1)
-			go e.ClassUsesClass(&class, &usedByClass, ci, ui, &wg)
+			go e.ClassUsesClass(class, usedByClass, ci, ui, &wg)
 		} 
 	}
 
@@ -70,9 +67,9 @@ func (e *Extractor) MatchUsages() {
 	//panic("done")
 }
 
-func (e*Extractor) ClassUsesClass(class *Scope, usedByClass *Scope, ci int, ui int, wg *sync.WaitGroup) {
+func (e*Extractor) ClassUsesClass(class Scope, usedByClass Scope, ci int, ui int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	if usedByClass.GetName() != class.GetName() && usedByClass.UsesClass(class) {
+	if usedByClass.GetName() != class.GetName() && usedByClass.UsesClass(&class) {
 
 		e.mu.Lock()	
 		defer e.mu.Unlock()
@@ -301,15 +298,13 @@ func inProject(path string,projectName string) bool {
 
 
 
-func (e *Extractor) listDirs(root string, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (e *Extractor) listDirs(root string) {
 
 	files, err := ioutil.ReadDir(root)
 
 	if err != nil {
 		fmt.Println(err)
-		wg.Add(1)
-		go e.parseJavaFile(root, wg)
+		e.parseJavaFile(root)
 		return
 	}
 
@@ -318,17 +313,14 @@ func (e *Extractor) listDirs(root string, wg *sync.WaitGroup) {
 		file := files[fileIndex]
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
-			wg.Add(1)
-			go e.parseJavaFile(root + string(os.PathSeparator) + file.Name(), wg)
+			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
 		} else if file.IsDir()  {
-			wg.Add(1)
-			go e.listDirs(root + string(os.PathSeparator) + file.Name(), wg)
+			e.listDirs(root + string(os.PathSeparator) + file.Name())
 		}
 	}
 }
 
-func (e* Extractor) parseJavaFile(filePath string, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (e* Extractor) parseJavaFile(filePath string) {
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -712,56 +704,45 @@ func NewImports(c []byte) (Imports, error) {
 	return Imports{imports: imports, pack: pack, importUses: make([]string, 0, 10)}, nil
 }
 
-func (i *Imports) SearchUses(b string, innerClasses []string) [] string {
+func trySplit(hay string, prefixes [3]string, needle string ) []string {
 
-	// remove inner class declarations
-	body := b
+	var contentSplit []string
 
-	for _, icName := range innerClasses {
+	for _, p := range prefixes {
+		contentSplit = strings.Split(hay, p + needle + "(")
 
-		icSplit := strings.Split(icName, ".")
-		ic := icSplit[len(icSplit) - 1]
+		if len(contentSplit) == 1 {
+			contentSplit = strings.Split(hay, p + needle + " ")
+		}
 
-		body = strings.Join(strings.Split(body, "inteface " + ic), "")
-		body = strings.Join(strings.Split(body, "class " + ic), "")
-		body = strings.Join(strings.Split(body, "enum " + ic), "")
-		body = strings.Join(strings.Split(body, "record " + ic), "")
+		if len(contentSplit) == 1 {
+			contentSplit = strings.Split(hay, p + needle + "\n")
+		}
 
-		i.imports = append(i.imports, icName)
+		if len(contentSplit) == 1 {
+			contentSplit = strings.Split(hay, p + needle + ".")
+		}
+
+		if len(contentSplit) > 1 {
+			return contentSplit
+		}
 	}
 
-	return i.GetImportedEntities(body)
-}
+	return contentSplit
 
-func (i* Imports) GetImportedEntities(body string) []string {
-
-	importUses := make([]string, 0, len(i.imports) * 4)
-
-	for _, imp := range i.imports {
-
-		if i.IsEntityImported(imp, body) || i.IsStaticEntityImported(imp, body) {
-			importUses = append(importUses, RemoveTemplate(imp))
-		}		
-	}
-
-	return importUses
 }
 
 
-func (i*Imports) IsEntityImported(entity string, body string) bool {
+func (i*Imports) IsClassUsed(class *Scope, body string) bool {
 
-	importSplit := strings.Split(entity, ".")
-	ending :=  importSplit[len(importSplit) - 1]
+	importSplit := strings.Split(class.GetName(), ".")
+	ending := importSplit[len(importSplit) - 1]
 
-	contentSplit := strings.Split(body, ending + " ")
+	if class.IsAnnotation() {
+		ending = "@" + ending
+	} 
 
-	if len(contentSplit) == 1 {
-		contentSplit = strings.Split(body, ending + "(") 
-	}
-
-	if len(contentSplit) == 1 {
-		contentSplit = strings.Split(body, ending + ".") 
-	}
+	contentSplit := trySplit(body, [3]string{" ", "\n", "("}, ending)
 
 	if len(contentSplit) > 1 {
 		for i := 1; i < len(contentSplit); i += 2 {
@@ -840,6 +821,8 @@ func (i*Imports) IsImported(searchedClass *Scope) bool {
 	if searchedClass.GetPackage() == i.pack {
 		return true
 	}
+
+	if searchedClass.IsPrivate {return false}
 
 	searchedValue := searchedClass.GetName()
 	if i.IsInPackage(searchedValue) {
