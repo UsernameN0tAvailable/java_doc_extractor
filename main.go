@@ -750,6 +750,14 @@ func (i*Imports) IsClassUsed(class *Scope, body string) bool {
 			if len(chunk) > 1 {	
 				roundSplit := strings.Split(chunk, "(")	
 
+				for _, m := range class.GetStaticMethods() {
+					smSplit := strings.Split(m, ".")
+					if smSplit[len(smSplit)- 1] == roundSplit[0] {
+						return true
+					}
+				}
+
+
 				if len(roundSplit) < 2 {
 					roundSplit = strings.Split(chunk, ")")
 				}
@@ -817,6 +825,7 @@ func (i*Imports) IsInPackage(searchedValue string) bool {
 }
 
 func (i*Imports) IsImported(searchedClass *Scope) bool {
+
 
 	if searchedClass.GetPackage() == i.pack {
 		return true
