@@ -76,7 +76,7 @@ func (e*Extractor) ClassUsesClass(class Scope, usedByClass Scope, ci int, ui int
 
 		// match tests and benchmarks
 		if !class.IsATest() && usedByClass.IsATest() {	
-	
+
 			e.classes[ci].AppendTestCase(usedByClass.GetName())
 		} else {
 
@@ -329,9 +329,9 @@ func (e* Extractor) parseJavaFile(filePath string) {
 		fmt.Println("Couldnt read file at: " + filePath)
 		return
 	}
-	clean := removeComment(content)
+	//clean := removeComment(content)
 
-	e.parseFile(clean, filePath)
+	e.parseFile(content, filePath)
 
 }
 
@@ -356,6 +356,9 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 	parser := NewParser()
 
+	//	fmt.Println(path)
+
+
 	for i, _ := range content {
 
 		nextIndex := i + 1
@@ -372,9 +375,30 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			case LeaveMultilineComment: 
 			doc = ""
 			lastElementEnd = i
+			case SemiColumn: // catch interface methods
+			if activeScope != nil && activeScope.IsInterface() {
+
+				signatureStart, signature := findSignature(i, content, lastElementEnd + 1) 	
+				signature = string(removeComment([]byte(signature)))
+
+
+				sigArr := make([]string, 0, 10)
+
+				for _,s := range strings.Split(signature, "\n") {
+					if len(s) > 0 && s[0] != slash {
+						sigArr = append(sigArr, s)
+					}
+				}
+				if isValidSignature(signature) {	
+					e.storeSignature(signature, doc, path, &imports, activeScope, signatureStart, getCurrentLine(content, i)) 		
+				}
+			}
+
 		case EnterScope:
 
-			signature := findSignature(i, content, lastElementEnd + 1) 	
+			signatureStart, signature := findSignature(i, content, lastElementEnd + 1) 	
+			signature = string(removeComment([]byte(signature)))
+
 
 			sigArr := make([]string, 0, 10)
 
@@ -386,7 +410,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			isContainerScope := false
 			if isValidSignature(signature) {	
-				isContainerScope = e.storeSignature(signature, doc, path, &imports, activeScope) 		
+				isContainerScope = e.storeSignature(signature, doc, path, &imports, activeScope, signatureStart, getCurrentLine(content, i)) 		
 			} 
 
 			if isContainerScope {
@@ -409,6 +433,17 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			lastElementEnd = i
 			doc = ""
+
+			if activeScopes[len(activeScopes) - 1] == nil && activeScope != nil {
+				err, m := activeScope.GetLastMethod()
+				if err != nil {
+					//fmt.Println(string(content), activeScopes)
+					//panic(err)
+				} else {
+					m.AddBody(string(content), i)
+				}
+
+			} 
 
 			body := content[scopeStarts[len(scopeStarts) - 1]:i]
 
@@ -445,6 +480,9 @@ func (e* Extractor) parseFile(content []byte, path string) {
 	}
 }
 
+func getCurrentLine(content []byte, index int) int {
+	return len(strings.Split(string(content[:index]), "\n"))
+}
 
 func printLine(content []byte, index int) {
 
@@ -495,7 +533,7 @@ func removeComment(v []byte) []byte {
 }
 
 
-func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports, activeScope *Scope) bool {
+func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports, activeScope *Scope, signatureStart int, signatureLineStart int) bool {
 
 	isContainerScope := false
 	fields := strings.Fields(s)
@@ -525,7 +563,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 		defer e.mu.Unlock()
 		e.classes = append(e.classes, NewScope(path, s, doc, imports, activeScope))	
 	} else if activeScope != nil {
-		activeScope.AppendMethod(NewMethod(s, doc))
+		activeScope.AppendMethod(NewMethod(s, doc, signatureStart, signatureLineStart))
 	}
 
 	return isContainerScope 
@@ -542,12 +580,29 @@ func contains(stack string, hay byte) bool {
 	return false
 }
 
+func isArrayDeclaration(s string) bool {
+
+	content := []byte(s)
+
+	parser := Parser{}
+
+	for i := 0; i < len(content); i ++ {
+		result := parser.Parse(content, i)
+		if result == CloseSquareScope && parser.ParamScopeCount == 0 {
+			return true
+		}
+
+	}
+
+	return false
+}
+
 func isValidSignature(s string) bool {
 
 	s = string(removeComment([]byte(s)))
 
-	// string declaration
-	if len(strings.Split(s, "[]")) > 1 {
+
+	if isArrayDeclaration(s) {
 		return false
 	}
 
@@ -627,14 +682,20 @@ func findFirstSignature(i int, content []byte, lastElementEnd int) []byte {
 }
 
 
-func findSignature(i int, content []byte, lastElementEnd int) string {
+func findSignature(i int, content []byte, lastElementEnd int) (int, string) {
+
+	iterEnd := i
+
+	if content[i] == semiColumn {
+		iterEnd = i - 1
+	}
 
 	end := i	
 	start := end
 
 	paramsScope := 0
 
-	for t := end; t > lastElementEnd; t-- {
+	for t := iterEnd; t > lastElementEnd; t-- {
 
 		char := content[t]
 
@@ -649,8 +710,7 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 		}
 		start = t
 	}
-
-	return strings.TrimSpace(string(content[start: end]))
+	return start, strings.TrimSpace(string(content[start: end]))
 }
 
 
