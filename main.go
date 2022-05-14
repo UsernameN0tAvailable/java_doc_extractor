@@ -362,7 +362,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 	parser := NewParser()
 
-	//fmt.Println(path)
+	fmt.Println(path)
 
 
 	for i, _ := range content {
@@ -378,10 +378,10 @@ func (e* Extractor) parseFile(content []byte, path string) {
 		case LeaveDocumentation:
 			doc = string(content[start:nextIndex])
 			lastElementEnd = i
-			case LeaveMultilineComment: 
+		case LeaveMultilineComment: 
 			doc = ""
 			lastElementEnd = i
-			case SemiColumn: // catch interface methods
+		case SemiColumn: // catch interface methods
 			if activeScope != nil && activeScope.IsInterface() {
 
 				signatureStart, signature := findSignature(i, content, lastElementEnd + 1) 	
@@ -415,6 +415,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			}
 
 			isContainerScope := false
+
 			if isValidSignature(signature) {	
 				isContainerScope = e.storeSignature(signature, doc, path, &imports, activeScope, signatureStart, getCurrentLine(content, i)) 		
 			} 
@@ -535,6 +536,31 @@ func removeComment(v []byte) []byte {
 	return v
 }
 
+func removeStrings(v []byte) []byte {
+
+	start := 0
+
+	parser := Parser{}
+
+
+	for i, _ := range v {
+
+		nextIndex := i + 1
+
+		switch parser.Parse(v, i) {
+		case EnterString:
+			start = i
+		case LeaveString:
+			firstChunk := string(v[:start])
+			endChunk := string(v[nextIndex+1:])
+			return removeStrings([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+
+		}
+	}
+
+	return v
+}
+
 
 func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports, activeScope *Scope, signatureStart int, signatureLineStart int) bool {
 
@@ -603,7 +629,7 @@ func isArrayDeclaration(s string) bool {
 func isValidSignature(s string) bool {
 
 	s = string(removeComment([]byte(s)))
-
+	s = string(removeStrings([]byte(s)))
 
 	if isArrayDeclaration(s) {
 		return false
