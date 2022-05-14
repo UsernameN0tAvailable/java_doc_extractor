@@ -31,6 +31,7 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	projectName := splitRootPath[len(splitRootPath) - 1]	
 	basePath = strings.Split(rootArg, projectName)[0]
 
+
 	root, err := filepath.Abs(rootArg)
 
 	if err != nil {
@@ -38,7 +39,7 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 		panic("no file")	
 	}
 
-	e.listDirs(root)
+	e.listDirs(root, projectName)
 
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
@@ -76,7 +77,7 @@ func (e*Extractor) ClassUsesClass(class Scope, usedByClass Scope, ci int, ui int
 
 		// match tests and benchmarks
 		if !class.IsATest() && usedByClass.IsATest() {	
-	
+
 			e.classes[ci].AppendTestCase(usedByClass.GetName())
 		} else {
 
@@ -298,13 +299,13 @@ func inProject(path string,projectName string) bool {
 
 
 
-func (e *Extractor) listDirs(root string) {
+func (e *Extractor) listDirs(root string, projectName string) {
 
 	files, err := ioutil.ReadDir(root)
 
 	if err != nil {
 		fmt.Println(err)
-		e.parseJavaFile(root)
+		e.parseJavaFile(root, projectName)
 		return
 	}
 
@@ -313,14 +314,14 @@ func (e *Extractor) listDirs(root string) {
 		file := files[fileIndex]
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
-			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
+			e.parseJavaFile(root + string(os.PathSeparator) + file.Name(), projectName)
 		} else if file.IsDir()  {
-			e.listDirs(root + string(os.PathSeparator) + file.Name())
+			e.listDirs(root + string(os.PathSeparator) + file.Name(), projectName)
 		}
 	}
 }
 
-func (e* Extractor) parseJavaFile(filePath string) {
+func (e* Extractor) parseJavaFile(filePath string, projectName string) {
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -329,10 +330,15 @@ func (e* Extractor) parseJavaFile(filePath string) {
 		fmt.Println("Couldnt read file at: " + filePath)
 		return
 	}
-	clean := removeComment(content)
+	//clean := removeComment(content)
 
-	e.parseFile(clean, filePath)
+	e.parseFile(content, getRelativePath(filePath, projectName))
 
+}
+
+func getRelativePath(path string, projectName string) string {
+	relSplit := strings.Split(path, projectName)[1:]
+	return "/" + projectName + strings.Join(relSplit, projectName)
 }
 
 func (e* Extractor) parseFile(content []byte, path string) {
@@ -372,9 +378,31 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			case LeaveMultilineComment: 
 			doc = ""
 			lastElementEnd = i
+			case SemiColumn: // catch interface methods
+			if len(activeScopes) > 0 && activeScopes[len(activeScopes)- 1] != nil  {
+
+				signatureStart, signature := findSignature(i, content, lastElementEnd + 1) 	
+				signature = string(removeComment([]byte(signature)))
+
+
+				sigArr := make([]string, 0, 10)
+
+				for _,s := range strings.Split(signature, "\n") {
+					if len(s) > 0 && s[0] != slash {
+						sigArr = append(sigArr, s)
+					}
+				}
+
+				if isValidSignature(signature) && !isVariable(signature) {	
+					e.storeSignature(signature, doc, path, &imports, activeScope, signatureStart, getCurrentLine(content, i)) 		
+				}
+			}
+
 		case EnterScope:
 
-			signature := findSignature(i, content, lastElementEnd + 1) 	
+			signatureStart, signature := findSignature(i, content, lastElementEnd + 1) 	
+			signature = string(removeComment([]byte(signature)))
+
 
 			sigArr := make([]string, 0, 10)
 
@@ -385,8 +413,9 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			}
 
 			isContainerScope := false
+
 			if isValidSignature(signature) {	
-				isContainerScope = e.storeSignature(signature, doc, path, &imports, activeScope) 		
+				isContainerScope = e.storeSignature(signature, doc, path, &imports, activeScope, signatureStart, getCurrentLine(content, i)) 		
 			} 
 
 			if isContainerScope {
@@ -409,6 +438,13 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 			lastElementEnd = i
 			doc = ""
+
+			if activeScopes[len(activeScopes) - 1] == nil && activeScope != nil && !activeScope.IsInterface()  {
+				err, m := activeScope.GetLastMethod()
+				if err == nil {
+					m.AddBody(string(content), i + 1)
+				} 
+			} 
 
 			body := content[scopeStarts[len(scopeStarts) - 1]:i]
 
@@ -439,12 +475,16 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			} else {
 				activeScope = nil
 			}
+
 		default:
 
 		}
 	}
 }
 
+func getCurrentLine(content []byte, index int) int {
+	return len(strings.Split(string(content[:index]), "\n"))
+}
 
 func printLine(content []byte, index int) {
 
@@ -494,8 +534,36 @@ func removeComment(v []byte) []byte {
 	return v
 }
 
+func removeStrings(v []byte) []byte {
 
-func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports, activeScope *Scope) bool {
+	start := 0
+
+	parser := Parser{}
+
+
+	for i, _ := range v {
+
+		nextIndex := i + 1
+
+		switch parser.Parse(v, i) {
+		case EnterString:
+			start = i
+		case LeaveString:
+			firstChunk := string(v[:start])
+			if len(v) > nextIndex {
+				endChunk := string(v[nextIndex+1:])
+				return removeStrings([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+			} 
+			return v
+
+		}
+	}
+
+	return v
+}
+
+
+func (e*Extractor) storeSignature(s string, doc string, path string, imports *Imports, activeScope *Scope, signatureStart int, signatureLineStart int) bool {
 
 	isContainerScope := false
 	fields := strings.Fields(s)
@@ -525,7 +593,7 @@ func (e*Extractor) storeSignature(s string, doc string, path string, imports *Im
 		defer e.mu.Unlock()
 		e.classes = append(e.classes, NewScope(path, s, doc, imports, activeScope))	
 	} else if activeScope != nil {
-		activeScope.AppendMethod(NewMethod(s, doc))
+		activeScope.AppendMethod(NewMethod(s, doc, signatureStart, signatureLineStart))
 	}
 
 	return isContainerScope 
@@ -542,9 +610,31 @@ func contains(stack string, hay byte) bool {
 	return false
 }
 
+func isArrayDeclaration(s string) bool {
+
+	content := []byte(s)
+
+	parser := Parser{}
+
+	for i := 0; i < len(content); i ++ {
+		result := parser.Parse(content, i)
+		if result == CloseSquareScope && parser.ParamScopeCount == 0 && parser.TemplateScopeCount == 0 {
+			return true
+		}
+
+	}
+
+	return false
+}
+
 func isValidSignature(s string) bool {
 
 	s = string(removeComment([]byte(s)))
+	s = string(removeStrings([]byte(s)))
+
+	if isArrayDeclaration(s) {
+		return false
+	}
 
 	// string declaration
 	if len(strings.Split(s, "[]")) > 1 {
@@ -578,8 +668,24 @@ func isValidSignature(s string) bool {
 	}
 }
 
+func isVariable(s string) bool {
+
+	content := []byte(strings.Split(s, "=")[0])
+
+	parser := Parser{}
+
+	for i, _ := range content {
+		if parser.Parse(content, i) == EnterParamsScope {
+			return false
+		}
+	}
+
+
+	return true
+}
+
 func isValidSignatureKeyWord(predicate string) bool {
-	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized"  
+	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized" && predicate != "do" 
 }
 
 
@@ -627,14 +733,20 @@ func findFirstSignature(i int, content []byte, lastElementEnd int) []byte {
 }
 
 
-func findSignature(i int, content []byte, lastElementEnd int) string {
+func findSignature(i int, content []byte, lastElementEnd int) (int, string) {
+
+	iterEnd := i
+
+	if content[i] == semiColumn {
+		iterEnd = i - 1
+	}
 
 	end := i	
 	start := end
 
 	paramsScope := 0
 
-	for t := end; t > lastElementEnd; t-- {
+	for t := iterEnd; t > lastElementEnd; t-- {
 
 		char := content[t]
 
@@ -649,8 +761,7 @@ func findSignature(i int, content []byte, lastElementEnd int) string {
 		}
 		start = t
 	}
-
-	return strings.TrimSpace(string(content[start: end]))
+	return start, strings.TrimSpace(string(content[start: end]))
 }
 
 

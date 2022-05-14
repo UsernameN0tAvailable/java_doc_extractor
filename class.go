@@ -1,8 +1,7 @@
 package main
 
 import (
-	//	"fmt"
-//	"fmt"
+	"errors"
 	"strings"
 )
 
@@ -14,7 +13,7 @@ type Scope struct {
 	Methods []Method
 	Interfaces []string `json:"interfaces"`
 	staticIndex int
-	fullPath string
+	FullPath string `json:"path"`
 	imports Imports
 	ScopeType string `json:"type"`
 	IsTest bool `json:"isTest"`
@@ -122,7 +121,7 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 	return Scope{
 		IsTest: isTest,
 		ScopeType: scopeType,
-		fullPath: fullPath,
+		FullPath: fullPath,
 		staticIndex: staticIndex,
 		Doc: doc, 
 		visibility: vis,
@@ -141,6 +140,14 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		body: "",
 		InnerClasses: make([]string, 0, 20),
 	} 
+}
+
+func (s *Scope) GetLastMethod() (error, *Method) {
+	if len(s.Methods) == 0 {
+		return errors.New("Entity has no methods!!"), nil
+	}
+
+	return nil, &s.Methods[len(s.Methods) - 1]
 }
 
 func findAnnotations(content string, imports *Imports) []string {
@@ -315,7 +322,7 @@ func (c * Scope) AppendMethod(m Method) {
 }
 
 func (c * Scope) GetFullPath() string {
-	return c.fullPath
+	return c.FullPath
 }
 
 func (c* Scope) GetDocLinesCount() int {
