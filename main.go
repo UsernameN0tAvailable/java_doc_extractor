@@ -362,9 +362,6 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 	parser := NewParser()
 
-	fmt.Println(path)
-
-
 	for i, _ := range content {
 
 		nextIndex := i + 1
@@ -378,10 +375,10 @@ func (e* Extractor) parseFile(content []byte, path string) {
 		case LeaveDocumentation:
 			doc = string(content[start:nextIndex])
 			lastElementEnd = i
-		case LeaveMultilineComment: 
+			case LeaveMultilineComment: 
 			doc = ""
 			lastElementEnd = i
-		case SemiColumn: // catch interface methods
+			case SemiColumn: // catch interface methods
 			if activeScope != nil && activeScope.IsInterface() {
 
 				signatureStart, signature := findSignature(i, content, lastElementEnd + 1) 	
@@ -552,8 +549,11 @@ func removeStrings(v []byte) []byte {
 			start = i
 		case LeaveString:
 			firstChunk := string(v[:start])
-			endChunk := string(v[nextIndex+1:])
-			return removeStrings([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+			if len(v) > nextIndex {
+				endChunk := string(v[nextIndex+1:])
+				return removeStrings([]byte(strings.Join([]string{firstChunk, endChunk}, "")))
+			} 
+			return v
 
 		}
 	}
