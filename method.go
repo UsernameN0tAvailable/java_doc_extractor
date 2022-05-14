@@ -7,6 +7,13 @@ import (
 type Method struct {
 	Signature string `json:"signature"`
 	Documentation string `json:"documentation"`
+	signatureStart int
+	Line int `json:"line"`
+	Body string  `json:"code"`
+}
+
+func (m *Method) AddBody (body string, currentIndex int) {
+	m.Body = body[m.signatureStart:currentIndex]
 }
 
 
@@ -44,6 +51,6 @@ func (m*Method) GetName() string {
 }
 
  
-func NewMethod(s string, d string) Method {
-	return Method{Signature: s, Documentation: d}
+func NewMethod(s string, d string, signatureStart int, signatureLineStart int) Method {
+	return Method{Signature: s, Documentation: d, signatureStart: signatureStart, Line: signatureLineStart}
 }

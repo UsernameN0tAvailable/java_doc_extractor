@@ -19,6 +19,8 @@ const (
 	templateStart = byte('<')
 	templateEnd = byte('>')
 	equal = byte('=')
+	squareOpen = byte('[')
+	squareClose = byte(']')
 ) 
 
 const (
@@ -44,6 +46,10 @@ const (
 	LeaveJson = 19
 	EnterMultilineComment = 20
 	LeaveMultilineComment = 21
+	EnterSquareScope = 22
+	LeaveSquareScope = 23
+	CloseSquareScope = 24
+	SemiColumn = 25
 )
 
 
@@ -59,6 +65,7 @@ type Parser struct {
 	ParamScopeCount int
 	TemplateScopeCount int
 	ScopeCount int
+	SquareScopeCount int
 
 }
 
@@ -105,6 +112,8 @@ func (p *Parser) Parse(content []byte, index int) int {
 	} else if c == scopeOff && p.IsInEmptyBody() {
 		p.ScopeCount--
 		return LeaveScope
+	} else if c == semiColumn && p.IsInEmptyBody(){
+		return SemiColumn
 	} else if c == str && p.CanSwitchString() {
 
 		if len(content) > nextIndex && len(content) > nextNextIndex && content[nextIndex] == str && content[nextNextIndex] == str {
@@ -160,6 +169,17 @@ func (p *Parser) Parse(content []byte, index int) int {
 	}
 
 		return LeaveTemplate
+	} else if c == squareOpen && p.IsInLogic() {
+		p.SquareScopeCount++
+		return EnterSquareScope
+	} else if c == squareClose && p.IsInLogic() {
+		p.SquareScopeCount--
+
+		if p.SquareScopeCount > 0 {
+			return LeaveSquareScope
+		} 
+
+		return CloseSquareScope
 	}
 
 	return Nothing
