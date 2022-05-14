@@ -52,6 +52,7 @@ type Parser struct {
 	InInlineComment bool
 	InDocumentation bool
 	InJson bool
+	InDeclaration bool
 
 	InString bool
 	InChar bool
@@ -59,11 +60,12 @@ type Parser struct {
 	ParamScopeCount int
 	TemplateScopeCount int
 	ScopeCount int
+	DeclarationScope int
 
 }
 
 func NewParser() Parser {
-	return Parser{InComment: false, InInlineComment: false, InDocumentation: false, InString: false, InChar: false, Escape: false, ParamScopeCount: 0, ScopeCount: 0, TemplateScopeCount: 0}
+	return Parser{}
 }
 
 
@@ -148,6 +150,11 @@ func (p *Parser) Parse(content []byte, index int) int {
 	        p.ParamScopeCount++	
 		return EnterParamsScope
 	} else if c == roundClose && p.IsInLogic() {
+
+		if p.InDeclaration && p.DeclarationScope == p.ParamScopeCount {
+			p.InDeclaration = false
+		}
+
 		p.ParamScopeCount--
 		return LeaveParamsScope
 	} else if c == templateStart && !p.InConditional(content, index) && p.IsInLogic() {
@@ -160,6 +167,11 @@ func (p *Parser) Parse(content []byte, index int) int {
 	}
 
 		return LeaveTemplate
+	} else if c == equal && p.IsInLogic() {
+		p.DeclarationScope = p.ParamScopeCount
+		p.InDeclaration = true
+	} else if c == semiColumn && p.IsInLogic() && p.InDeclaration {
+		p.InDeclaration = false
 	}
 
 	return Nothing
