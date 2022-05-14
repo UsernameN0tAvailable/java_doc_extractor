@@ -31,6 +31,7 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 	projectName := splitRootPath[len(splitRootPath) - 1]	
 	basePath = strings.Split(rootArg, projectName)[0]
 
+
 	root, err := filepath.Abs(rootArg)
 
 	if err != nil {
@@ -38,7 +39,7 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 		panic("no file")	
 	}
 
-	e.listDirs(root)
+	e.listDirs(root, projectName)
 
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
@@ -298,13 +299,13 @@ func inProject(path string,projectName string) bool {
 
 
 
-func (e *Extractor) listDirs(root string) {
+func (e *Extractor) listDirs(root string, projectName string) {
 
 	files, err := ioutil.ReadDir(root)
 
 	if err != nil {
 		fmt.Println(err)
-		e.parseJavaFile(root)
+		e.parseJavaFile(root, projectName)
 		return
 	}
 
@@ -313,14 +314,14 @@ func (e *Extractor) listDirs(root string) {
 		file := files[fileIndex]
 
 		if ext := filepath.Ext(file.Name()); !file.IsDir() && ext == ".java" {
-			e.parseJavaFile(root + string(os.PathSeparator) + file.Name())
+			e.parseJavaFile(root + string(os.PathSeparator) + file.Name(), projectName)
 		} else if file.IsDir()  {
-			e.listDirs(root + string(os.PathSeparator) + file.Name())
+			e.listDirs(root + string(os.PathSeparator) + file.Name(), projectName)
 		}
 	}
 }
 
-func (e* Extractor) parseJavaFile(filePath string) {
+func (e* Extractor) parseJavaFile(filePath string, projectName string) {
 	tot += 1
 
 	content, err := os.ReadFile(filePath)
@@ -331,8 +332,13 @@ func (e* Extractor) parseJavaFile(filePath string) {
 	}
 	//clean := removeComment(content)
 
-	e.parseFile(content, filePath)
+	e.parseFile(content, getRelativePath(filePath, projectName))
 
+}
+
+func getRelativePath(path string, projectName string) string {
+	relSplit := strings.Split(path, projectName)[1:]
+	return "/" + projectName + strings.Join(relSplit, projectName)
 }
 
 func (e* Extractor) parseFile(content []byte, path string) {
@@ -356,7 +362,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 
 	parser := NewParser()
 
-	//	fmt.Println(path)
+	//fmt.Println(path)
 
 
 	for i, _ := range content {
@@ -434,15 +440,11 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			lastElementEnd = i
 			doc = ""
 
-			if activeScopes[len(activeScopes) - 1] == nil && activeScope != nil {
+			if activeScopes[len(activeScopes) - 1] == nil && activeScope != nil && !activeScope.IsInterface()  {
 				err, m := activeScope.GetLastMethod()
-				if err != nil {
-					//fmt.Println(string(content), activeScopes)
-					//panic(err)
-				} else {
-					m.AddBody(string(content), i)
-				}
-
+				if err == nil {
+					m.AddBody(string(content) + "}", i)
+				} 
 			} 
 
 			body := content[scopeStarts[len(scopeStarts) - 1]:i]
@@ -474,6 +476,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			} else {
 				activeScope = nil
 			}
+
 		default:
 
 		}
@@ -588,7 +591,7 @@ func isArrayDeclaration(s string) bool {
 
 	for i := 0; i < len(content); i ++ {
 		result := parser.Parse(content, i)
-		if result == CloseSquareScope && parser.ParamScopeCount == 0 {
+		if result == CloseSquareScope && parser.ParamScopeCount == 0 && parser.TemplateScopeCount == 0 {
 			return true
 		}
 
@@ -634,7 +637,7 @@ func isValidSignature(s string) bool {
 }
 
 func isValidSignatureKeyWord(predicate string) bool {
-	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized"  
+	return predicate != "for" && predicate != "if" && predicate != "while" && predicate != "else" && predicate != "try" && predicate != "catch" && predicate != "finally" && predicate != "->" && predicate != "switch" && predicate != "new" && predicate != "&&" && predicate != "||" && predicate != "==" && predicate != "!=" && predicate != "synchronized" && predicate != "do" 
 }
 
 
