@@ -546,6 +546,11 @@ func isValidSignature(s string) bool {
 
 	s = string(removeComment([]byte(s)))
 
+	// string declaration
+	if len(strings.Split(s, "[]")) > 1 {
+		return false
+	}
+
 	trimmed := strings.TrimSpace(s)
 
 	if len(trimmed) == 0 {
