@@ -443,7 +443,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			if activeScopes[len(activeScopes) - 1] == nil && activeScope != nil && !activeScope.IsInterface()  {
 				err, m := activeScope.GetLastMethod()
 				if err == nil {
-					m.AddBody(string(content) + "}", i)
+					m.AddBody(string(content), i + 1)
 				} 
 			} 
 
