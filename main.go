@@ -379,7 +379,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			doc = ""
 			lastElementEnd = i
 			case SemiColumn: // catch interface methods
-			if activeScope != nil && activeScope.IsInterface() {
+			if len(activeScopes) > 0 && activeScopes[len(activeScopes)- 1] != nil  {
 
 				signatureStart, signature := findSignature(i, content, lastElementEnd + 1) 	
 				signature = string(removeComment([]byte(signature)))
@@ -392,7 +392,8 @@ func (e* Extractor) parseFile(content []byte, path string) {
 						sigArr = append(sigArr, s)
 					}
 				}
-				if isValidSignature(signature) {	
+
+				if isValidSignature(signature) && !isVariable(signature) {	
 					e.storeSignature(signature, doc, path, &imports, activeScope, signatureStart, getCurrentLine(content, i)) 		
 				}
 			}
@@ -660,6 +661,22 @@ func isValidSignature(s string) bool {
 		}
 		return true
 	}
+}
+
+func isVariable(s string) bool {
+
+	content := []byte(strings.Split(s, "=")[0])
+
+	parser := Parser{}
+
+	for i, _ := range content {
+		if parser.Parse(content, i) == EnterParamsScope {
+			return false
+		}
+	}
+
+
+	return true
 }
 
 func isValidSignatureKeyWord(predicate string) bool {
