@@ -385,7 +385,7 @@ func (e* Extractor) parseFile(content []byte, path string) {
 			}
 
 			isContainerScope := false
-			if isValidSignature(signature) {	
+			if isValidSignature(signature) && !parser.InDeclaration {	
 				isContainerScope = e.storeSignature(signature, doc, path, &imports, activeScope) 		
 			} 
 
