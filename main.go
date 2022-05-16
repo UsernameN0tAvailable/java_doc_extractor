@@ -631,6 +631,7 @@ func isValidSignature(s string) bool {
 
 	s = string(removeComment([]byte(s)))
 	s = string(removeStrings([]byte(s)))
+	s = string(RemoveTemplate(s))
 
 	if isArrayDeclaration(s) {
 		return false
@@ -671,7 +672,6 @@ func isValidSignature(s string) bool {
 func isVariable(s string) bool {
 
 	c := strings.Split(s, "\n")
-
 	content := []byte(strings.Split(c[len(c) - 1], "=")[0])
 
 	parser := Parser{}
