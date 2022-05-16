@@ -670,7 +670,9 @@ func isValidSignature(s string) bool {
 
 func isVariable(s string) bool {
 
-	content := []byte(strings.Split(s, "=")[0])
+	c := strings.Split(s, "\n")
+
+	content := []byte(strings.Split(c[len(c) - 1], "=")[0])
 
 	parser := Parser{}
 
