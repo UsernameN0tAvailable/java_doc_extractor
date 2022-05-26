@@ -12,8 +12,10 @@ type Method struct {
 	signatureStart int
 	Line int `json:"line"`
 	Body string  `json:"code"`
-	ReturnType string
-	Throws bool
+	HasJavaDocComment bool `json:"hasJavaDocComment"`
+	DocumentableItems int `json:"documentableItems"`
+	DocumentedItems int `json:"documentedItems"`
+	WordsInJavaDoc int
 }
 
 func (m *Method) AddBody (body string, currentIndex int) {
@@ -56,8 +58,13 @@ func (m*Method) GetName() string {
  
 func NewMethod(s string, d string, signatureStart int, signatureLineStart int) Method {
 
-	signatureFields := strings.Fields(s)
+	documentedItems, documentableItems := metrics(s, d)
 
+	javaDocWords := 0
+
+	if documentedItems > 0 {
+		javaDocWords = wordsInJavaDoc(d)
+	}
 
 	return Method{
 		Signature: s, 
@@ -65,8 +72,85 @@ func NewMethod(s string, d string, signatureStart int, signatureLineStart int) M
 		signatureStart: 
 		signatureStart, 
 		Line: signatureLineStart, 
-		Throws: sliceContains(signatureFields, "throws"), 
-		ReturnType: findReturnValue(signatureFields) }
+		DocumentedItems: documentedItems,
+		DocumentableItems: documentableItems,
+		HasJavaDocComment: documentedItems > 0,
+		WordsInJavaDoc: javaDocWords,
+	}
+}
+
+func metrics(s string, doc string) (int, int) {
+
+	documentedItems := 0
+	signature := strings.Fields(s)
+
+	returnType := findReturnValue(signature)
+
+	documentableItems := countParams(s)
+
+	if returnType != "void" {
+		documentableItems++
+
+		if len(strings.Split(doc, "@return")) > 1 {
+			documentedItems++
+		}
+
+	}
+
+	throws := sliceContains(signature, "throws")
+
+
+	if throws {
+		documentableItems++
+
+		if len(strings.Split(doc, "@throws")) > 1 {
+			documentedItems++
+		}
+	}
+
+	documentedItems += len(strings.Split(doc, "@param")) -1
+
+
+	return documentedItems, documentableItems
+}
+
+func wordsInJavaDoc(d string) int {
+
+	c := strings.Join(strings.Split(d, "/*"), "")
+	c = strings.Join(strings.Split(c, "*/"), "")
+	c = strings.Join(strings.Split(c, "*"), "")
+	c = strings.Join(strings.Split(c, "\n"), "")
+
+	return len(strings.Fields(c))
+}
+
+
+func countParams(signature string) int {
+
+	content := []byte(signature)
+
+	parser := Parser{}
+
+	start := 0
+	end := 0
+
+	for i, _ := range content {
+		result := parser.Parse(content, i)
+
+		if result == EnterParamsScope && parser.ParamScopeCount == 1 {
+			start = i
+		} else if result == LeaveParamsScope && parser.ParamScopeCount == 0 {
+			end = i
+			break
+		}
+	}
+
+	if start + 1 == end {
+		return 0
+	}
+
+	c := string(content[start:end])
+	return len(strings.Split(c, ","))
 }
 
 
