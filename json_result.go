@@ -1,8 +1,5 @@
 package main
 
-import "fmt"
-
-
 type JsonProjectInfos struct {
 	NumberOfClasses int `json:"numberOfClasses"`
 	NumberOfInterfaces int `json:"numberOfInterfaces"`
@@ -85,6 +82,33 @@ func NewJsonResult(entities  []Scope) JsonResult {
 		}
 	}
 
+	var anyj float32
+
+	var dir float32
+
+	var anyc float32
+
+	var wjpd float32
+
+
+	if declarations == 0 {
+		anyj = 0
+		anyc = 0
+		wjpd = 0
+	} else {
+		anyj = float32(declarationsWithJavaDoc) / float32(declarations)
+		anyc = float32(decWithAnyComment) / float32(declarations)
+		wjpd = float32(javaDocWords) / float32(declarations)
+	}
+
+	if documentableItems == 0 {
+		dir = 0
+	} else if documentableItems >= documentedItems {
+		dir = float32(documentedItems) / float32(documentableItems)
+	} else {
+		dir = 1.0 
+	}
+
 	return JsonResult{
 		ProjectInfos: JsonProjectInfos{
 			NumberOfClasses: numberOfClasses,
@@ -95,10 +119,10 @@ func NewJsonResult(entities  []Scope) JsonResult {
 			TotNumberOfEntities: totNumberOfEntities,
 			NumberOfEntitiesWithSuperClass: entitiesWithSuperClass,
 			NumberOfEntitiesWithChildren: entitesWithChildren,
-			ANYJ: float32(declarationsWithJavaDoc) / float32(declarations),
-			DIR: float32(documentedItems) / float32(documentableItems),
-			ANYC: float32(decWithAnyComment) / float32(declarations),
-			WJPD: float32(javaDocWords) / float32(declarations),
+			ANYJ: anyj,
+			DIR: dir,
+			ANYC: anyc,
+			WJPD: wjpd,
 		},
 		Entities: entities,
 	}

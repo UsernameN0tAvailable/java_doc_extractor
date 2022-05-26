@@ -179,10 +179,24 @@ func (s*Scope) ComputeMetrics() {
 		}
 	}
 
-	s.ANYJ = float32(decWithAnyJavadoc) / float32(declarations)
-	s.DIR = float32(documentedItems) / float32(documentableItems)
-	s.ANYC = float32(decWithAnyComment) / float32(declarations)
-	s.WJPD = float32(javaDocWords) / float32(declarations)
+
+	if declarations == 0 {
+		s.ANYJ = 0
+		s.ANYC = 0
+		s.WJPD = 0
+	} else {
+		s.ANYJ = float32(decWithAnyJavadoc) / float32(declarations)
+		s.ANYC = float32(decWithAnyComment) / float32(declarations)
+		s.WJPD = float32(javaDocWords) / float32(declarations)
+	}
+
+	if documentableItems == 0 {
+		s.DIR = 0
+	} else if documentableItems >= documentedItems {
+		s.DIR = float32(documentedItems) / float32(documentableItems)
+	} else {
+		s.DIR = 1.0 
+	}
 
 	s.declarationsWithJavaDoc = decWithAnyJavadoc
 	s.documentedItems = documentedItems
