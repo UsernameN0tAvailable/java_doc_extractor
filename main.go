@@ -43,9 +43,17 @@ func (e *Extractor) Extract(rootArg string) []Scope {
 
 	e.SecondaryPackageMatches()
 	e.MatchUsages()
+	e.ComputeMetrics()
 
 
 	return e.classes
+}
+
+func (e *Extractor) ComputeMetrics() {
+
+	for i := 0; i < len(e.classes); i++ {
+		e.classes[i].ComputeMetrics()
+	}
 }
 
 

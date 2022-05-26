@@ -26,6 +26,18 @@ type Scope struct {
 	IsPrivate bool `json:"isPrivate"`
 	body string
 	InnerClasses []string
+
+	// metrics
+	ANYJ float32 `json:"anyj"`
+	DIR float32 `json:"dir"`
+	ANYC float32 `json:"anyc"`
+	WJPD float32 `json:"wjpd"`
+
+	declarationsWithJavaDoc int 
+	documentedItems int
+	documentableItems int
+	wordsInJavaDoc int
+	decWithAnyComment int
 }
 
 func (s*Scope) IsClass() bool {return s.ScopeType == "class"}
@@ -141,6 +153,49 @@ func NewScope(fullPath string, signature string, doc string, imports *Imports, s
 		InnerClasses: make([]string, 0, 20),
 	} 
 }
+
+func (s*Scope) ComputeMetrics() {
+
+	decWithAnyJavadoc := 0
+	documentedItems := 0
+	decWithAnyComment := 0
+	declarations := len(s.Methods)
+	javaDocWords := 0
+
+	documentableItems := 0
+
+	for _, m := range s.Methods {
+
+		if m.DocumentedItems() > 0 {
+			decWithAnyJavadoc ++
+			documentedItems += m.DocumentedItems()
+			javaDocWords += m.WordsInJavaDoc()
+		}
+
+		documentableItems += m.DocumentableItems()
+
+		if len(m.Documentation) > 0 {
+			decWithAnyComment++
+		}
+	}
+
+	s.ANYJ = float32(decWithAnyJavadoc) / float32(declarations)
+	s.DIR = float32(documentedItems) / float32(documentableItems)
+	s.ANYC = float32(decWithAnyComment) / float32(declarations)
+	s.WJPD = float32(javaDocWords) / float32(declarations)
+
+	s.declarationsWithJavaDoc = decWithAnyJavadoc
+	s.documentedItems = documentedItems
+	s.documentableItems = documentableItems
+	s.wordsInJavaDoc = javaDocWords
+	s.decWithAnyComment = decWithAnyComment
+}
+
+func (s*Scope) DeclatationsWithJavaDoc() int {return s.declarationsWithJavaDoc}
+func (s*Scope) DocumentedItems() int {return s.documentedItems}
+func (s*Scope) DocumentableItems() int {return s.documentableItems}
+func (s*Scope) WordsInJavaDoc() int {return s.wordsInJavaDoc}
+func (s*Scope) DecWithAnyComment() int {return s.decWithAnyComment}
 
 func (s *Scope) GetLastMethod() (error, *Method) {
 	if len(s.Methods) == 0 {

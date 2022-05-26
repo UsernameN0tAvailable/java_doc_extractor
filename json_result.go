@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 
 type JsonProjectInfos struct {
 	NumberOfClasses int `json:"numberOfClasses"`
@@ -11,6 +13,13 @@ type JsonProjectInfos struct {
 
 	NumberOfEntitiesWithSuperClass int `json:"numberOfEntitiesWithSuperClass"`
 	NumberOfEntitiesWithChildren   int `json:"numberOfEntitesWithChildren"`
+
+	// metrics
+	ANYJ float32 `json:"anyj"`
+	DIR float32 `json:"dir"`
+	ANYC float32 `json:"anyc"`
+	WJPD float32 `json:"wjpd"`
+
 }
 
 
@@ -34,10 +43,25 @@ func NewJsonResult(entities  []Scope) JsonResult {
 
 	entitiesWithSuperClass := 0
 	entitesWithChildren :=  0
-	
 
+
+	// metrics
+	declarationsWithJavaDoc := 0
+	documentedItems := 0
+	documentableItems := 0
+	javaDocWords := 0
+	decWithAnyComment := 0
+
+	declarations := 0
 
 	for _, e := range entities {
+		declarationsWithJavaDoc += e.DeclatationsWithJavaDoc()
+		documentedItems += e.DocumentedItems()
+		documentableItems += e.DocumentableItems()
+		javaDocWords += e.WordsInJavaDoc()
+		decWithAnyComment += e.DecWithAnyComment()
+
+		declarations += len(e.Methods)
 
 		if e.IsClass() {
 			numberOfClasses++
@@ -61,7 +85,6 @@ func NewJsonResult(entities  []Scope) JsonResult {
 		}
 	}
 
-
 	return JsonResult{
 		ProjectInfos: JsonProjectInfos{
 			NumberOfClasses: numberOfClasses,
@@ -72,6 +95,10 @@ func NewJsonResult(entities  []Scope) JsonResult {
 			TotNumberOfEntities: totNumberOfEntities,
 			NumberOfEntitiesWithSuperClass: entitiesWithSuperClass,
 			NumberOfEntitiesWithChildren: entitesWithChildren,
+			ANYJ: float32(declarationsWithJavaDoc) / float32(declarations),
+			DIR: float32(documentedItems) / float32(documentableItems),
+			ANYC: float32(decWithAnyComment) / float32(declarations),
+			WJPD: float32(javaDocWords) / float32(declarations),
 		},
 		Entities: entities,
 	}

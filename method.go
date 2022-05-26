@@ -12,11 +12,20 @@ type Method struct {
 	signatureStart int
 	Line int `json:"line"`
 	Body string  `json:"code"`
-	HasJavaDocComment bool `json:"hasJavaDocComment"`
-	DocumentableItems int `json:"documentableItems"`
-	DocumentedItems int `json:"documentedItems"`
-	WordsInJavaDoc int
+	hasJavaDocComment bool 
+	documentableItems int 
+	documentedItems int 
+	wordsInJavaDoc int
 }
+
+
+func (m*Method) HasJavaDocComment() bool {return m.hasJavaDocComment}
+
+func (m*Method) DocumentableItems() int {return m.documentableItems}
+
+func (m*Method) DocumentedItems() int  {return m.documentedItems}
+
+func (m*Method) WordsInJavaDoc() int {return m.wordsInJavaDoc}
 
 func (m *Method) AddBody (body string, currentIndex int) {
 	m.Body = body[m.signatureStart:currentIndex]
@@ -72,10 +81,10 @@ func NewMethod(s string, d string, signatureStart int, signatureLineStart int) M
 		signatureStart: 
 		signatureStart, 
 		Line: signatureLineStart, 
-		DocumentedItems: documentedItems,
-		DocumentableItems: documentableItems,
-		HasJavaDocComment: documentedItems > 0,
-		WordsInJavaDoc: javaDocWords,
+		documentedItems: documentedItems,
+		documentableItems: documentableItems,
+		hasJavaDocComment: documentedItems > 0,
+		wordsInJavaDoc: javaDocWords,
 	}
 }
 
